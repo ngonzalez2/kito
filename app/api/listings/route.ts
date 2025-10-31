@@ -3,16 +3,32 @@ import { revalidatePath } from 'next/cache';
 import { assertAdminAccess } from '@/lib/auth';
 import { createListing, getAllListings, getApprovedListings } from '@/lib/listings';
 
-function parseFilters(searchParams) {
+export const runtime = 'nodejs';
+export const preferredRegion = 'iad1';
+
+type ListingPayload = {
+  title: string;
+  description: string;
+  price: number | string;
+  condition: string;
+  location: string;
+  category: string | null;
+  brand: string | null;
+  model: string | null;
+  year: number | string;
+  imageUrl: string | null;
+};
+
+function parseFilters(searchParams: URLSearchParams) {
   return {
-    category: searchParams.get('category') || null,
-    condition: searchParams.get('condition') || null,
-    location: searchParams.get('location') || null,
+    category: searchParams.get('category'),
+    condition: searchParams.get('condition'),
+    location: searchParams.get('location'),
   };
 }
 
-function validateListingPayload(payload) {
-  const errors = [];
+function validateListingPayload(payload: Partial<ListingPayload>) {
+  const errors: string[] = [];
   if (!payload.title || !payload.title.trim()) {
     errors.push('Title is required.');
   }
@@ -37,11 +53,7 @@ function validateListingPayload(payload) {
   if (!payload.model) {
     errors.push('Model is required.');
   }
-  if (
-    payload.year === undefined ||
-    payload.year === null ||
-    Number.isNaN(Number(payload.year))
-  ) {
+  if (payload.year === undefined || payload.year === null || Number.isNaN(Number(payload.year))) {
     errors.push('Year must be a valid number.');
   }
   if (!payload.imageUrl) {
@@ -50,14 +62,13 @@ function validateListingPayload(payload) {
   return errors;
 }
 
-export async function GET(request) {
+export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const includeAll = searchParams.get('includeAll') === 'true';
 
     if (includeAll) {
-      const authorized = assertAdminAccess(request);
-      if (!authorized) {
+      if (!assertAdminAccess(request)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
       const listings = await getAllListings();
@@ -67,39 +78,42 @@ export async function GET(request) {
     const listings = await getApprovedListings(parseFilters(searchParams));
     return NextResponse.json({ listings });
   } catch (error) {
-    console.error('[GET /api/listings] failed', error);
-    return NextResponse.json({ error: 'Failed to load listings.' }, { status: 500 });
+    console.error('[GET /api/listings]', error);
+    return NextResponse.json({ error: 'Failed to load listings' }, { status: 500 });
   }
 }
 
-export async function POST(request) {
+export async function POST(request: Request) {
   try {
-    const payload = await request.json();
+    const payload = (await request.json()) as Partial<ListingPayload>;
     const errors = validateListingPayload(payload);
     if (errors.length > 0) {
       return NextResponse.json({ error: errors.join(' ') }, { status: 400 });
     }
 
     const listing = await createListing({
-      title: payload.title.trim(),
-      description: payload.description.trim(),
+      title: payload.title!.trim(),
+      description: payload.description!.trim(),
       price: Number(payload.price),
-      condition: payload.condition,
-      location: payload.location,
-      category: payload.category,
-      brand: payload.brand,
-      model: payload.model,
+      condition: payload.condition!,
+      location: payload.location!,
+      category: payload.category ?? null,
+      brand: payload.brand ?? null,
+      model: payload.model ?? null,
       year: Number(payload.year),
-      imageUrl: payload.imageUrl,
+      imageUrl: payload.imageUrl ?? null,
     });
 
     revalidatePath('/');
     revalidatePath('/listings');
     revalidatePath('/admin');
 
-    return NextResponse.json({ listing, message: 'Listing submitted for approval.' }, { status: 201 });
+    return NextResponse.json(
+      { listing, message: 'Listing submitted for approval.' },
+      { status: 201 },
+    );
   } catch (error) {
-    console.error('[POST /api/listings] failed', error);
+    console.error('[POST /api/listings]', error);
     return NextResponse.json({ error: 'Failed to create listing.' }, { status: 500 });
   }
 }
