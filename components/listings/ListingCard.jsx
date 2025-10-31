@@ -10,7 +10,7 @@ const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506744038136-46273834
 
 export default function ListingCard({ listing, layout = 'vertical', showStatusTag = false, showReport = false }) {
   const { listings: listingsCopy, sell } = useTranslations();
-  const imageUrl = listing.image_url || FALLBACK_IMAGE;
+  const imageUrl = listing.imageUrl || FALLBACK_IMAGE;
   const isHorizontal = layout === 'horizontal';
   const categoryLabel = listing.category ? listingsCopy.categories?.[listing.category] ?? listing.category : null;
   const conditionLabel = listing.condition ? sell?.conditionOptions?.[listing.condition] ?? listing.condition : null;
