@@ -1,10 +1,13 @@
-import forms from '@tailwindcss/forms';
+const forms = require('@tailwindcss/forms');
 
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   content: [
-    './index.html',
-    './src/**/*.{js,jsx,ts,tsx}',
+    './app/**/*.{js,jsx,ts,tsx}',
+    './components/**/*.{js,jsx,ts,tsx}',
+    './context/**/*.{js,jsx,ts,tsx}',
+    './hooks/**/*.{js,jsx,ts,tsx}',
+    './lib/**/*.{js,jsx,ts,tsx}',
   ],
   theme: {
     extend: {
@@ -17,8 +20,8 @@ export default {
         white: 'var(--white)',
       },
       fontFamily: {
-        heading: ['Poppins', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
+        heading: ['var(--font-heading)', 'sans-serif'],
+        body: ['var(--font-body)', 'sans-serif'],
       },
       boxShadow: {
         coral: '0 20px 40px rgba(242, 106, 75, 0.35)',
