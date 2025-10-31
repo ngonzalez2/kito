@@ -31,6 +31,19 @@ function validateListingPayload(payload) {
   if (!payload.category) {
     errors.push('Category is required.');
   }
+  if (!payload.brand) {
+    errors.push('Brand is required.');
+  }
+  if (!payload.model) {
+    errors.push('Model is required.');
+  }
+  if (
+    payload.year === undefined ||
+    payload.year === null ||
+    Number.isNaN(Number(payload.year))
+  ) {
+    errors.push('Year must be a valid number.');
+  }
   if (!payload.imageUrl) {
     errors.push('Image URL is required.');
   }
@@ -74,6 +87,9 @@ export async function POST(request) {
       condition: payload.condition,
       location: payload.location,
       category: payload.category,
+      brand: payload.brand,
+      model: payload.model,
+      year: Number(payload.year),
       imageUrl: payload.imageUrl,
     });
 
