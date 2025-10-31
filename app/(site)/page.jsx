@@ -7,7 +7,7 @@ import { getApprovedListings } from '@/lib/listings';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  // ✅ Always define safe defaults for filters
+  // ✅ Always pass defined filters
   const filters = {
     category: null,
     condition: null,
