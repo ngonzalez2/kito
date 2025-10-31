@@ -4,43 +4,62 @@ import { useEffect, useState } from 'react';
 import ListingCard from '@/components/listings/ListingCard';
 import useTranslations from '@/hooks/useTranslations';
 
+const STORAGE_KEY = 'kito-admin-key';
+
+async function fetchPendingListings(key, admin) {
+  const response = await fetch('/api/listings?includeAll=true', {
+    headers: {
+      'x-admin-key': key,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error(response.status === 401 ? admin.errors.unauthorized : admin.errors.loadFailed);
+  }
+
+  const payload = await response.json();
+  const items = Array.isArray(payload.listings) ? payload.listings : [];
+  return items.filter((listing) => listing.status === 'pending');
+}
+
 export default function AdminDashboard() {
   const { admin } = useTranslations();
   const [adminKey, setAdminKey] = useState('');
   const [authorized, setAuthorized] = useState(false);
-  const [listings, setListings] = useState([]);
+  const [pendingListings, setPendingListings] = useState([]);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
+  const [feedback, setFeedback] = useState('');
 
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
-    const storedKey = window.localStorage.getItem('kito-admin-key');
-    if (storedKey) {
-      setAdminKey(storedKey);
-      verifyKey(storedKey);
+
+    const storedKey = window.localStorage.getItem(STORAGE_KEY);
+    if (!storedKey) {
+      return;
     }
+
+    setAdminKey(storedKey);
+    verifyKey(storedKey);
   }, []);
 
   const verifyKey = async (key) => {
     try {
       setStatus('loading');
-      const response = await fetch('/api/listings?includeAll=true', {
-        headers: {
-          'x-admin-key': key,
-        },
-      });
-      if (!response.ok) {
-        throw new Error(response.status === 401 ? admin.errors.unauthorized : admin.errors.loadFailed);
-      }
-      const payload = await response.json();
-      setListings(payload.listings || []);
+      setError('');
+      setFeedback('');
+
+      const listings = await fetchPendingListings(key, admin);
+
+      setPendingListings(listings);
       setAuthorized(true);
       setStatus('idle');
-      setError('');
+
       if (typeof window !== 'undefined') {
-        window.localStorage.setItem('kito-admin-key', key);
+        window.localStorage.setItem(STORAGE_KEY, key);
       }
     } catch (err) {
       console.error('Admin authentication failed', err);
@@ -56,41 +75,45 @@ export default function AdminDashboard() {
       setError(admin.errors.required);
       return;
     }
+
     verifyKey(adminKey);
   };
 
   const refreshListings = async (key = adminKey) => {
     try {
-      const response = await fetch('/api/listings?includeAll=true', {
-        headers: {
-          'x-admin-key': key,
-        },
-      });
-      if (!response.ok) {
-        throw new Error(admin.errors.loadFailed);
-      }
-      const payload = await response.json();
-      setListings(payload.listings || []);
+      setStatus('loading');
+      setFeedback('');
+      const listings = await fetchPendingListings(key, admin);
+      setPendingListings(listings);
     } catch (err) {
       console.error('Failed to refresh listings', err);
+      setError(err.message || admin.errors.loadFailed);
+    } finally {
+      setStatus('idle');
     }
   };
 
   const moderateListing = async (id, action) => {
     try {
       setStatus('saving');
-      const response = await fetch(`/api/listings/${id}`, {
-        method: 'PUT',
+      setError('');
+      setFeedback('');
+
+      const response = await fetch(`/api/listings/${id}/status`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'x-admin-key': adminKey,
         },
         body: JSON.stringify({ status: action }),
       });
+
       if (!response.ok) {
-        throw new Error(admin.errors.saveFailed);
+        throw new Error(response.status === 401 ? admin.errors.unauthorized : admin.errors.saveFailed);
       }
-      await refreshListings();
+
+      setPendingListings((current) => current.filter((listing) => listing.id !== id));
+      setFeedback(action === 'approved' ? admin.messages.approved : admin.messages.rejected);
     } catch (err) {
       console.error('Failed to update listing', err);
       setError(err.message || admin.errors.saveFailed);
@@ -99,25 +122,15 @@ export default function AdminDashboard() {
     }
   };
 
-  const deleteListing = async (id) => {
-    try {
-      setStatus('saving');
-      const response = await fetch(`/api/listings/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'x-admin-key': adminKey,
-        },
-      });
-      if (!response.ok) {
-        throw new Error(admin.errors.saveFailed);
-      }
-      await refreshListings();
-    } catch (err) {
-      console.error('Failed to delete listing', err);
-      setError(err.message || admin.errors.saveFailed);
-    } finally {
-      setStatus('idle');
+  const signOut = () => {
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(STORAGE_KEY);
     }
+    setAuthorized(false);
+    setAdminKey('');
+    setPendingListings([]);
+    setFeedback('');
+    setError('');
   };
 
   if (!authorized) {
@@ -151,14 +164,32 @@ export default function AdminDashboard() {
         <h1 className="font-heading text-3xl uppercase tracking-[0.4em] text-deep-blue">{admin.dashboardTitle}</h1>
         <p className="text-sm text-deep-blue/70">{admin.dashboardSubtitle}</p>
       </header>
+      <div className="flex flex-wrap items-center justify-center gap-4">
+        <button
+          type="button"
+          onClick={() => refreshListings()}
+          disabled={status === 'saving' || status === 'loading'}
+          className="rounded-full border border-deep-blue/20 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-deep-blue disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {status === 'loading' ? admin.actions.refreshing : admin.actions.refresh}
+        </button>
+        <button
+          type="button"
+          onClick={signOut}
+          className="rounded-full border border-sand px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-deep-blue"
+        >
+          {admin.actions.signOut}
+        </button>
+      </div>
+      {feedback && <p className="text-sm text-emerald-600">{feedback}</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <section className="flex flex-col gap-6">
-        {listings.length === 0 ? (
+        {pendingListings.length === 0 ? (
           <p className="rounded-3xl border border-dashed border-sand/60 bg-white/60 p-8 text-center text-sm text-deep-blue/70">
             {admin.empty}
           </p>
         ) : (
-          listings.map((listing) => (
+          pendingListings.map((listing) => (
             <article key={listing.id} className="rounded-3xl bg-white/90 p-6 shadow-lg">
               <ListingCard listing={listing} layout="horizontal" showStatusTag />
               <div className="mt-4 flex flex-wrap gap-3">
@@ -177,14 +208,6 @@ export default function AdminDashboard() {
                   className="rounded-full bg-red-500/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   {admin.actions.reject}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => deleteListing(listing.id)}
-                  disabled={status === 'saving'}
-                  className="rounded-full border border-red-500 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-red-500 disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {admin.actions.delete}
                 </button>
               </div>
             </article>
