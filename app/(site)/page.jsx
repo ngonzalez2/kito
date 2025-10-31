@@ -7,7 +7,20 @@ import { getApprovedListings } from '@/lib/listings';
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
-  const listings = await getApprovedListings();
+  // ✅ Always define safe defaults for filters
+  const filters = {
+    category: null,
+    condition: null,
+    location: null,
+  };
+
+  let listings = [];
+  try {
+    listings = await getApprovedListings(filters);
+  } catch (error) {
+    console.error('[HomePage] Failed to fetch listings:', error);
+  }
+
   const featured = listings.slice(0, 6);
 
   return (
