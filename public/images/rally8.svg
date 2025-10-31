@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="640" height="640" viewBox="0 0 640 640" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="dawn" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F5D6A0" />
+      <stop offset="100%" stop-color="#58C2C0" />
+    </linearGradient>
+  </defs>
+  <rect width="640" height="640" fill="#0B3954" />
+  <rect x="40" y="120" width="560" height="400" rx="40" fill="url(#dawn)" opacity="0.85" />
+  <path d="M80 360 C180 260 260 420 360 320 C440 240 520 360 560 300" stroke="#F26A4B" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" />
+  <g fill="#0B3954" font-family="'Poppins', sans-serif" text-anchor="middle">
+    <text x="320" y="300" font-size="36" font-weight="700">Slingshot Rally</text>
+    <text x="320" y="350" font-size="26" font-weight="600">8m • 2019</text>
+    <text x="320" y="398" font-size="20" font-weight="500" opacity="0.75">Stylized stand-in art</text>
+  </g>
+</svg>
