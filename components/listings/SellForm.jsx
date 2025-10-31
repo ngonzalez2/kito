@@ -7,6 +7,25 @@ const CONDITIONS = ['new', 'excellent', 'good', 'used'];
 const LOCATIONS = ['La Guajira', 'Barranquilla', 'Cartagena', 'Medellín', 'Bogotá'];
 const CATEGORIES = ['kite', 'board', 'accessories'];
 
+const parseResponsePayload = async (response) => {
+  const contentType = response.headers.get('content-type') || '';
+
+  if (contentType.includes('application/json')) {
+    try {
+      return await response.clone().json();
+    } catch (error) {
+      console.warn('Failed to parse JSON response', error);
+    }
+  }
+
+  try {
+    return await response.text();
+  } catch (error) {
+    console.warn('Failed to read response body', error);
+    return null;
+  }
+};
+
 export default function SellForm() {
   const { sell } = useTranslations();
   const [formState, setFormState] = useState({
@@ -86,9 +105,16 @@ export default function SellForm() {
       method: 'POST',
       body: formData,
     });
-    const payload = await response.json();
+    const payload = await parseResponsePayload(response);
     if (!response.ok) {
-      throw new Error(payload?.error || sell.errors.uploadFailed);
+      const errorMessage =
+        (typeof payload === 'string' && payload) ||
+        (payload && typeof payload === 'object' && payload.error) ||
+        sell.errors.uploadFailed;
+      throw new Error(errorMessage);
+    }
+    if (!payload || typeof payload !== 'object' || !payload.url) {
+      throw new Error(sell.errors.uploadFailed);
     }
     return payload.url;
   };
@@ -115,9 +141,17 @@ export default function SellForm() {
           imageUrl,
         }),
       });
-      const payload = await response.json();
+      const payload = await parseResponsePayload(response);
       if (!response.ok) {
-        throw new Error(payload?.error || sell.errors.submitFailed);
+        const errorMessage =
+          (typeof payload === 'string' && payload) ||
+          (payload && typeof payload === 'object' && payload.error) ||
+          sell.errors.submitFailed;
+        throw new Error(errorMessage);
+      }
+
+      if (!payload || typeof payload !== 'object' || !payload.listing) {
+        throw new Error(sell.errors.submitFailed);
       }
 
       resetForm();
