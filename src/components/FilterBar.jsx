@@ -1,14 +1,9 @@
 import { useState } from 'react';
-
-const filters = [
-  { label: 'Category', key: 'category', options: ['Kites', 'Boards', 'Harnesses'] },
-  { label: 'Condition', key: 'condition', options: ['New', 'Excellent', 'Good', 'Fair'] },
-  { label: 'Price', key: 'price', options: ['< $3M', '$3M - $6M', '$6M+'] },
-  { label: 'Location', key: 'location', options: ['Mayapo', 'Cabo de la Vela', 'Santa Verónica', 'Cartagena', 'Puerto Velero', 'Santa Marta'] },
-];
+import useTranslations from '../hooks/useTranslations.js';
 
 export default function FilterBar({ onFilter }) {
   const [selected, setSelected] = useState({});
+  const { filters: filterCopy } = useTranslations();
 
   const handleChange = (key, value) => {
     const next = { ...selected, [key]: value };
@@ -18,7 +13,7 @@ export default function FilterBar({ onFilter }) {
 
   return (
     <div className="flex flex-col gap-4 rounded-3xl bg-white/80 p-4 shadow-lg backdrop-blur-sm sm:flex-row sm:items-center sm:justify-between">
-      {filters.map((filter) => (
+      {filterCopy.items.map((filter) => (
         <label key={filter.key} className="flex flex-1 flex-col gap-2 text-xs uppercase tracking-[0.3em] text-deep-blue/80">
           {filter.label}
           <select
@@ -26,10 +21,10 @@ export default function FilterBar({ onFilter }) {
             onChange={(event) => handleChange(filter.key, event.target.value)}
             value={selected[filter.key] || ''}
           >
-            <option value="">Any</option>
+            <option value="">{filterCopy.any}</option>
             {filter.options.map((option) => (
-              <option key={option} value={option}>
-                {option}
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             ))}
           </select>
