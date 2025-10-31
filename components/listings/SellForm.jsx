@@ -6,6 +6,112 @@ import useTranslations from '@/hooks/useTranslations';
 const CONDITIONS = ['new', 'excellent', 'good', 'used'];
 const LOCATIONS = ['La Guajira', 'Barranquilla', 'Cartagena', 'Medellín', 'Bogotá'];
 const CATEGORIES = ['kite', 'board', 'accessories'];
+const KITE_BRANDS = [
+  { name: 'Cabrinha', models: ['Switchblade', 'Moto X', 'Drifter', 'Contra', 'FX2'] },
+  { name: 'Duotone', models: ['Evo', 'Rebel', 'Dice', 'Neo', 'Juice'] },
+  { name: 'North', models: ['Reach', 'Orbit', 'Pulse', 'Carve', 'Code Zero'] },
+  { name: 'Slingshot', models: ['Machine', 'Rally', 'RPM', 'Ghost', 'Raptor'] },
+  { name: 'Naish', models: ['Pivot', 'Slash', 'Triad', 'Dash', 'Ride'] },
+  { name: 'F-One', models: ['Bandit', 'Trigger', 'WTF!?', 'Breeze', 'Bullit'] },
+  { name: 'Core', models: ['XR', 'GTS', 'Nexus', 'Impact', 'Section'] },
+  { name: 'Airush', models: ['Lithium', 'Union', 'Razor', 'Lift', 'Ultra'] },
+  { name: 'Eleveight', models: ['RS', 'FS', 'OS', 'XS', 'PS'] },
+  { name: 'Ozone', models: ['Reo', 'Enduro', 'Edge', 'Catalyst', 'Alpha'] },
+  { name: 'Ocean Rodeo', models: ['Roam', 'Crave', 'Rise', 'Flite', 'Prodigy'] },
+  { name: 'Liquid Force', models: ['NV', 'Solo', 'P1', 'Wow', 'Vortex'] },
+];
+const CURRENT_YEAR = new Date().getFullYear();
+const YEAR_OPTIONS = Array.from({ length: 16 }, (_, index) => String(CURRENT_YEAR - index));
+const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
+const MAX_CANVAS_DIMENSION = 1800;
+
+const loadImage = (file) =>
+  new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const image = new Image();
+    image.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(image);
+    };
+    image.onerror = (error) => {
+      URL.revokeObjectURL(objectUrl);
+      reject(error);
+    };
+    image.src = objectUrl;
+  });
+
+const canvasToBlob = (canvas, quality) =>
+  new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) {
+          reject(new Error('Canvas compression failed.'));
+          return;
+        }
+        resolve(blob);
+      },
+      'image/jpeg',
+      quality
+    );
+  });
+
+async function compressImageFile(file, maxSizeBytes = MAX_UPLOAD_SIZE) {
+  if (typeof window === 'undefined' || !(file instanceof File)) {
+    return file;
+  }
+
+  if (file.size <= maxSizeBytes) {
+    return file;
+  }
+
+  try {
+    const image = await loadImage(file);
+    const canvas = document.createElement('canvas');
+    const context = canvas.getContext('2d', { alpha: false });
+
+    let { width, height } = image;
+    const largestSide = Math.max(width, height);
+
+    if (largestSide > MAX_CANVAS_DIMENSION) {
+      const scale = MAX_CANVAS_DIMENSION / largestSide;
+      width = Math.round(width * scale);
+      height = Math.round(height * scale);
+    }
+
+    canvas.width = width;
+    canvas.height = height;
+    context.drawImage(image, 0, 0, width, height);
+
+    let quality = 0.9;
+    let blob = await canvasToBlob(canvas, quality);
+
+    while (blob.size > maxSizeBytes && quality > 0.5) {
+      quality = Math.max(quality - 0.1, 0.5);
+      blob = await canvasToBlob(canvas, quality);
+    }
+
+    while (blob.size > maxSizeBytes && (width > 640 || height > 640)) {
+      width = Math.round(width * 0.85);
+      height = Math.round(height * 0.85);
+      canvas.width = width;
+      canvas.height = height;
+      context.drawImage(image, 0, 0, width, height);
+      blob = await canvasToBlob(canvas, quality);
+    }
+
+    if (blob.size > maxSizeBytes) {
+      return file;
+    }
+
+    return new File([blob], file.name.replace(/\.(png|webp)$/i, '.jpg'), {
+      type: 'image/jpeg',
+      lastModified: Date.now(),
+    });
+  } catch (error) {
+    console.warn('Failed to compress image file', error);
+    return file;
+  }
+}
 
 const parseResponsePayload = async (response) => {
   const contentType = response.headers.get('content-type') || '';
@@ -35,6 +141,9 @@ export default function SellForm() {
     condition: CONDITIONS[0],
     location: LOCATIONS[0],
     category: CATEGORIES[0],
+    brand: KITE_BRANDS[0]?.name ?? '',
+    model: KITE_BRANDS[0]?.models[0] ?? '',
+    year: YEAR_OPTIONS[0],
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -65,9 +174,17 @@ export default function SellForm() {
       condition: CONDITIONS[0],
       location: LOCATIONS[0],
       category: CATEGORIES[0],
+      brand: KITE_BRANDS[0]?.name ?? '',
+      model: KITE_BRANDS[0]?.models[0] ?? '',
+      year: YEAR_OPTIONS[0],
     });
     setImageFile(null);
-    setImagePreview('');
+    setImagePreview((prev) => {
+      if (prev) {
+        URL.revokeObjectURL(prev);
+      }
+      return '';
+    });
   };
 
   const savePendingListing = (listing) => {
@@ -81,23 +198,95 @@ export default function SellForm() {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
+    if (name === 'brand') {
+      const selectedBrand = KITE_BRANDS.find((option) => option.name === value);
+      setFormState((prev) => ({
+        ...prev,
+        brand: value,
+        model: selectedBrand?.models[0] ?? '',
+      }));
+      return;
+    }
+
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleFileChange = (event) => {
-    const file = event.target.files?.[0];
-    setImageFile(file || null);
-    if (file) {
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-    } else {
-      setImagePreview('');
+  const availableModels = useMemo(() => {
+    const selectedBrand = KITE_BRANDS.find((option) => option.name === formState.brand);
+    return selectedBrand?.models ?? [];
+  }, [formState.brand]);
+
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
+
+  const handleFileChange = async (event) => {
+    const input = event.target;
+    const file = input.files?.[0];
+
+    if (!file) {
+      setImageFile(null);
+      setImagePreview((prev) => {
+        if (prev) {
+          URL.revokeObjectURL(prev);
+        }
+        return '';
+      });
+      return;
+    }
+
+    try {
+      const compressedFile = await compressImageFile(file, MAX_UPLOAD_SIZE);
+
+      if (compressedFile.size > MAX_UPLOAD_SIZE) {
+        setImageFile(null);
+        setImagePreview((prev) => {
+          if (prev) {
+            URL.revokeObjectURL(prev);
+          }
+          return '';
+        });
+        setStatus('error');
+        setMessage(sell.errors.imageTooLarge);
+        input.value = '';
+        return;
+      }
+
+      setImageFile(compressedFile);
+      setImagePreview((prev) => {
+        if (prev) {
+          URL.revokeObjectURL(prev);
+        }
+        return URL.createObjectURL(compressedFile);
+      });
+      setStatus('idle');
+      setMessage('');
+    } catch (error) {
+      console.error('Failed to process selected image', error);
+      setImageFile(null);
+      setImagePreview((prev) => {
+        if (prev) {
+          URL.revokeObjectURL(prev);
+        }
+        return '';
+      });
+      setStatus('error');
+      setMessage(sell.errors.imageProcessing);
+      input.value = '';
     }
   };
 
   const uploadImage = async () => {
     if (!imageFile) {
       throw new Error(sell.errors.imageRequired);
+    }
+
+    if (imageFile.size > MAX_UPLOAD_SIZE) {
+      throw new Error(sell.errors.imageTooLarge);
     }
     const formData = new FormData();
     formData.append('file', imageFile);
@@ -138,6 +327,9 @@ export default function SellForm() {
           condition: formState.condition,
           location: formState.location,
           category: formState.category,
+          brand: formState.brand,
+          model: formState.model,
+          year: Number(formState.year),
           imageUrl,
         }),
       });
@@ -211,6 +403,53 @@ export default function SellForm() {
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
                 placeholder={sell.placeholders.price}
               />
+            </label>
+          </div>
+          <div className="grid gap-6 md:grid-cols-3">
+            <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
+              {sell.fields.brand}
+              <select
+                name="brand"
+                value={formState.brand}
+                onChange={handleInputChange}
+                className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+              >
+                {KITE_BRANDS.map((option) => (
+                  <option key={option.name} value={option.name}>
+                    {option.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
+              {sell.fields.model}
+              <select
+                name="model"
+                value={formState.model}
+                onChange={handleInputChange}
+                className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+              >
+                {availableModels.map((model) => (
+                  <option key={model} value={model}>
+                    {model}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
+              {sell.fields.year}
+              <select
+                name="year"
+                value={formState.year}
+                onChange={handleInputChange}
+                className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+              >
+                {YEAR_OPTIONS.map((year) => (
+                  <option key={year} value={year}>
+                    {year}
+                  </option>
+                ))}
+              </select>
             </label>
           </div>
           <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">

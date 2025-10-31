@@ -128,6 +128,9 @@ const translations = {
         condition: 'Condición',
         location: 'Ubicación',
         category: 'Categoría',
+        brand: 'Marca',
+        model: 'Modelo',
+        year: 'Año del kite',
         image: 'Fotografía del equipo',
       },
       placeholders: {
@@ -156,6 +159,8 @@ const translations = {
         imageRequired: 'Agrega al menos una imagen.',
         uploadFailed: 'No se pudo cargar la imagen.',
         submitFailed: 'No se pudo crear la publicación. Intenta de nuevo.',
+        imageTooLarge: 'Reduce el archivo a 5MB o menos.',
+        imageProcessing: 'No pudimos procesar la imagen. Intenta con otro archivo.',
       },
     },
     footer: {
@@ -314,6 +319,9 @@ const translations = {
         condition: 'Condition',
         location: 'Location',
         category: 'Category',
+        brand: 'Brand',
+        model: 'Model',
+        year: 'Year',
         image: 'Gear photo',
       },
       placeholders: {
@@ -342,6 +350,8 @@ const translations = {
         imageRequired: 'Please add an image.',
         uploadFailed: 'Image upload failed.',
         submitFailed: 'We could not create the listing. Try again.',
+        imageTooLarge: 'Image must be 5MB or smaller.',
+        imageProcessing: 'We could not process the image. Try another file.',
       },
     },
     footer: {
