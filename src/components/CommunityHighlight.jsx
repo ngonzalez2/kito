@@ -1,8 +1,12 @@
 import { motion } from 'framer-motion';
+import useTranslations from '../hooks/useTranslations.js';
 
 const spots = ['Mayapo', 'Cabo de la Vela', 'Santa Verónica'];
 
 export default function CommunityHighlight() {
+  const { community } = useTranslations();
+  const heading = community.heading.replace('{spots}', spots.join(', '));
+
   return (
     <section className="relative overflow-hidden bg-coastal-gradient py-16 text-white">
       <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 sm:px-6">
@@ -13,7 +17,7 @@ export default function CommunityHighlight() {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          Trusted by riders in {spots.join(', ')}
+          {heading}
         </motion.h2>
         <motion.p
           className="max-w-2xl text-base font-light"
@@ -22,8 +26,7 @@ export default function CommunityHighlight() {
           viewport={{ once: true }}
           transition={{ delay: 0.1, duration: 0.6 }}
         >
-          Conecta con vendedores verificados y encuentra equipo listo para navegar las mejores olas de
-          Colombia. La comunidad Kito mantiene historias, spots y equipos girando como el viento.
+          {community.description}
         </motion.p>
         <div className="grid gap-6 md:grid-cols-3">
           {spots.map((spot) => (
@@ -36,9 +39,7 @@ export default function CommunityHighlight() {
               transition={{ duration: 0.5, delay: 0.1 }}
             >
               <h3 className="font-heading text-xl uppercase tracking-[0.3em]">{spot}</h3>
-              <p className="mt-3 text-sm font-light">
-                Historias de viento, riders locales y equipos con confianza garantizada.
-              </p>
+              <p className="mt-3 text-sm font-light">{community.cardDescription}</p>
             </motion.div>
           ))}
         </div>

@@ -3,6 +3,7 @@ import listingsData from '../../data/listings.json';
 import ListingCard from '../components/ListingCard.jsx';
 import FilterBar from '../components/FilterBar.jsx';
 import PageTransition from '../components/PageTransition.jsx';
+import useTranslations from '../hooks/useTranslations.js';
 
 const priceMatcher = {
   '< $3M': (price) => price < 3000000,
@@ -12,6 +13,7 @@ const priceMatcher = {
 
 export default function Listings() {
   const [filters, setFilters] = useState({});
+  const { listings } = useTranslations();
 
   const filteredListings = useMemo(() => {
     return listingsData.filter((listing) => {
@@ -31,12 +33,12 @@ export default function Listings() {
       <section className="bg-gradient-to-b from-sky/30 via-white to-white py-16">
         <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 sm:px-6">
           <div className="flex flex-col gap-4">
-            <span className="text-xs font-semibold uppercase tracking-[0.4em] text-coral">Marketplace</span>
+            <span className="text-xs font-semibold uppercase tracking-[0.4em] text-coral">{listings.tag}</span>
             <h1 className="font-heading text-3xl uppercase tracking-[0.3em] text-deep-blue">
-              Encuentra tu próximo kite
+              {listings.heading}
             </h1>
             <p className="max-w-2xl text-base text-deep-blue/80">
-              Filtros personalizables para descubrir equipo perfecto según tus condiciones y spots favoritos.
+              {listings.description}
             </p>
           </div>
           <FilterBar onFilter={setFilters} />

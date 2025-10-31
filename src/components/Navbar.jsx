@@ -1,15 +1,16 @@
 import { useLocation, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import useScrollDirection from '../hooks/useScrollDirection.js';
-
-const navLinks = [
-  { to: '/', label: 'Inicio' },
-  { to: '/listings', label: 'Explorar' },
-];
+import { useLanguage } from '../context/LanguageContext.jsx';
+import useTranslations from '../hooks/useTranslations.js';
 
 export default function Navbar() {
   const scrollDirection = useScrollDirection();
   const location = useLocation();
+  const { toggleLanguage, language } = useLanguage();
+  const { navbar } = useTranslations();
+  const navLinks = navbar.links;
+  const toggleAriaLabel = language === 'es' ? navbar.languageToggle.toEn : navbar.languageToggle.toEs;
 
   return (
     <motion.nav
@@ -41,8 +42,19 @@ export default function Navbar() {
             href="#list-your-kite"
             className="gradient-button rounded-full px-5 py-2 text-xs font-semibold uppercase text-white shadow-coral"
           >
-            Publica tu equipo
+            {navbar.listButton}
           </a>
+          <button
+            type="button"
+            onClick={toggleLanguage}
+            aria-label={toggleAriaLabel}
+            className="flex items-center gap-2 rounded-full border border-coral/30 px-4 py-2 text-xs font-semibold uppercase text-deep-blue transition-colors duration-300 hover:border-coral hover:text-coral"
+          >
+            <span aria-hidden="true" className="text-lg">
+              {navbar.languageToggle.flag}
+            </span>
+            <span>{navbar.languageToggle.code}</span>
+          </button>
         </div>
       </div>
     </motion.nav>
