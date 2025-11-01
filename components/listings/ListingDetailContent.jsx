@@ -1,12 +1,13 @@
 'use client';
 
 import Image from 'next/image';
+import Link from 'next/link';
 import ListingReportButton from './ListingReportButton';
 import useTranslations from '@/hooks/useTranslations';
 
 const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80';
 
-export default function ListingDetailContent({ listing }) {
+export default function ListingDetailContent({ listing, previousListing = null, nextListing = null }) {
   const { listings, sell } = useTranslations();
   const imageUrl = listing.imageUrl || FALLBACK_IMAGE;
   const categoryLabel = listing.category ? listings.categories?.[listing.category] ?? listing.category : null;
@@ -16,6 +17,22 @@ export default function ListingDetailContent({ listing }) {
     <div className="mx-auto flex max-w-5xl flex-col gap-10 px-4 pb-16 pt-6 sm:px-6">
       <div className="relative h-[420px] overflow-hidden rounded-3xl shadow-lg">
         <Image src={imageUrl} alt={listing.title} fill className="h-full w-full object-cover" priority sizes="(min-width: 1024px) 60vw, 100vw" />
+        {previousListing && (
+          <ListingNavigationLink
+            href={`/listings/${previousListing.id}`}
+            direction="previous"
+            label={listings.detail.previous}
+            listingTitle={previousListing.title}
+          />
+        )}
+        {nextListing && (
+          <ListingNavigationLink
+            href={`/listings/${nextListing.id}`}
+            direction="next"
+            label={listings.detail.next}
+            listingTitle={nextListing.title}
+          />
+        )}
       </div>
       <div className="flex flex-col gap-6 rounded-3xl bg-white/80 p-8 shadow-lg">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -46,5 +63,43 @@ function DetailStat({ label, value }) {
       <span className="block text-xs font-semibold uppercase tracking-[0.3em] text-deep-blue/60">{label}</span>
       <span className="mt-1 block text-base font-semibold">{value}</span>
     </div>
+  );
+}
+
+function ListingNavigationLink({ href, direction, label, listingTitle }) {
+  const isPrevious = direction === 'previous';
+  const positionClass = isPrevious ? 'left-4' : 'right-4';
+  const rotationClass = isPrevious ? '-scale-x-100' : '';
+  const hoverTranslationClass = isPrevious ? 'group-hover:-translate-x-0.5' : 'group-hover:translate-x-0.5';
+  const accessibleLabel = listingTitle ? `${label}: ${listingTitle}` : label;
+
+  return (
+    <Link
+      href={href}
+      className={`group absolute top-1/2 z-10 flex -translate-y-1/2 items-center justify-center rounded-full bg-white/80 p-3 text-deep-blue shadow-lg backdrop-blur-sm transition hover:bg-white hover:text-coral focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral ${positionClass}`}
+      aria-label={accessibleLabel}
+      title={accessibleLabel}
+    >
+      <span className="sr-only">{accessibleLabel}</span>
+      <ArrowIcon className={`h-6 w-6 translate-x-0 transition-transform ${hoverTranslationClass} ${rotationClass}`} />
+    </Link>
+  );
+}
+
+function ArrowIcon({ className = '' }) {
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4.5 12h15" />
+      <path d="M14.5 6.5 20 12l-5.5 5.5" />
+    </svg>
   );
 }

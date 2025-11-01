@@ -84,6 +84,8 @@ const translations = {
         condition: 'Condición',
         location: 'Ubicación',
         category: 'Categoría',
+        previous: 'Ver publicación anterior',
+        next: 'Ver publicación siguiente',
       },
     },
     filters: {
@@ -308,6 +310,8 @@ const translations = {
         condition: 'Condition',
         location: 'Location',
         category: 'Category',
+        previous: 'View previous listing',
+        next: 'View next listing',
       },
     },
     filters: {
