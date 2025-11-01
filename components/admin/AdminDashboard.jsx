@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ListingCard from '@/components/listings/ListingCard';
 import useTranslations from '@/hooks/useTranslations';
 
@@ -31,6 +31,34 @@ export default function AdminDashboard() {
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [lastValidatedKey, setLastValidatedKey] = useState('');
+
+  const verifyKey = useCallback(
+    async (key) => {
+      try {
+        setStatus('loading');
+        setError('');
+        setFeedback('');
+
+        const listings = await fetchPendingListings(key, admin);
+
+        setPendingListings(listings);
+        setAuthorized(true);
+        setStatus('idle');
+        setLastValidatedKey(key);
+
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(STORAGE_KEY, key);
+        }
+      } catch (err) {
+        console.error('Admin authentication failed', err);
+        setError(err.message || admin.errors.loadFailed);
+        setAuthorized(false);
+        setStatus('idle');
+      }
+    },
+    [admin],
+  );
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -44,30 +72,7 @@ export default function AdminDashboard() {
 
     setAdminKey(storedKey);
     verifyKey(storedKey);
-  }, []);
-
-  const verifyKey = async (key) => {
-    try {
-      setStatus('loading');
-      setError('');
-      setFeedback('');
-
-      const listings = await fetchPendingListings(key, admin);
-
-      setPendingListings(listings);
-      setAuthorized(true);
-      setStatus('idle');
-
-      if (typeof window !== 'undefined') {
-        window.localStorage.setItem(STORAGE_KEY, key);
-      }
-    } catch (err) {
-      console.error('Admin authentication failed', err);
-      setError(err.message || admin.errors.loadFailed);
-      setAuthorized(false);
-      setStatus('idle');
-    }
-  };
+  }, [verifyKey]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
@@ -131,6 +136,7 @@ export default function AdminDashboard() {
     setPendingListings([]);
     setFeedback('');
     setError('');
+    setLastValidatedKey('');
   };
 
   if (!authorized) {
@@ -139,13 +145,17 @@ export default function AdminDashboard() {
         <h1 className="text-center font-heading text-2xl uppercase tracking-[0.4em] text-deep-blue">{admin.title}</h1>
         <p className="mt-3 text-center text-sm text-deep-blue/70">{admin.subtitle}</p>
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
-          <input
-            type="password"
-            value={adminKey}
-            onChange={(event) => setAdminKey(event.target.value)}
-            className="rounded-2xl border border-transparent bg-white px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
-            placeholder={admin.placeholder}
-          />
+          <label className="flex flex-col gap-2 text-xs font-semibold uppercase tracking-[0.3em] text-deep-blue">
+            {admin.placeholder}
+            <input
+              type="password"
+              value={adminKey}
+              onChange={(event) => setAdminKey(event.target.value)}
+              className="rounded-2xl border border-transparent bg-white px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+              placeholder={admin.placeholder}
+              aria-required="true"
+            />
+          </label>
           <button
             type="submit"
             className="gradient-button rounded-full px-4 py-2 text-sm font-semibold uppercase tracking-[0.3em] text-white"
@@ -158,6 +168,7 @@ export default function AdminDashboard() {
     );
   }
 
+  const isLoading = status === 'loading';
   return (
     <div className="flex flex-col gap-6">
       <header className="flex flex-col gap-2 text-center">
@@ -167,7 +178,7 @@ export default function AdminDashboard() {
       <div className="flex flex-wrap items-center justify-center gap-4">
         <button
           type="button"
-          onClick={() => refreshListings()}
+          onClick={() => refreshListings(lastValidatedKey || adminKey)}
           disabled={status === 'saving' || status === 'loading'}
           className="rounded-full border border-deep-blue/20 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-deep-blue disabled:cursor-not-allowed disabled:opacity-60"
         >
@@ -184,6 +195,20 @@ export default function AdminDashboard() {
       {feedback && <p className="text-sm text-emerald-600">{feedback}</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <section className="flex flex-col gap-6">
+        {isLoading && pendingListings.length === 0 && (
+          <div className="flex flex-col gap-4" role="status" aria-live="polite">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div
+                key={index}
+                className="animate-pulse rounded-3xl bg-white/60 p-6 shadow-inner"
+              >
+                <div className="h-4 w-1/3 rounded-full bg-sand/70" />
+                <div className="mt-4 h-3 w-2/3 rounded-full bg-sand/50" />
+                <div className="mt-6 h-32 rounded-3xl bg-sand/40" />
+              </div>
+            ))}
+          </div>
+        )}
         {pendingListings.length === 0 ? (
           <p className="rounded-3xl border border-dashed border-sand/60 bg-white/60 p-8 text-center text-sm text-deep-blue/70">
             {admin.empty}

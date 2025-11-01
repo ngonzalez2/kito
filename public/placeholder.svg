@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 260" role="img" aria-labelledby="title desc">
+  <title id="title">Placeholder illustration</title>
+  <desc id="desc">Muted gradient background with icon indicating missing image</desc>
+  <defs>
+    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#e0ecff" />
+      <stop offset="100%" stop-color="#f7f1ff" />
+    </linearGradient>
+  </defs>
+  <rect width="400" height="260" fill="url(#gradient)" rx="28" />
+  <g fill="none" stroke="#8fa6d8" stroke-width="8" stroke-linecap="round" stroke-linejoin="round">
+    <rect x="96" y="72" width="208" height="136" rx="16" />
+    <path d="M132 170l40-48 36 44 30-32 38 40" />
+    <circle cx="176" cy="120" r="16" />
+  </g>
+  <text x="200" y="226" text-anchor="middle" font-family="'Inter', sans-serif" font-size="20" fill="#6c7a99">
+    Image unavailable
+  </text>
+</svg>

@@ -135,6 +135,7 @@ export default function SellForm() {
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
   const [pendingListings, setPendingListings] = useState([]);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -170,6 +171,7 @@ export default function SellForm() {
       }
       return '';
     });
+    setFieldErrors({});
   };
 
   const savePendingListing = (listing) => {
@@ -184,6 +186,14 @@ export default function SellForm() {
   const handleInputChange = (event) => {
     const { name, value } = event.target;
     setFormState((prev) => ({ ...prev, [name]: value }));
+    setFieldErrors((prev) => {
+      if (!prev[name]) {
+        return prev;
+      }
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
   };
 
   useEffect(() => {
@@ -235,6 +245,14 @@ export default function SellForm() {
       });
       setStatus('idle');
       setMessage('');
+      setFieldErrors((prev) => {
+        if (!prev.imageUrl) {
+          return prev;
+        }
+        const next = { ...prev };
+        delete next.imageUrl;
+        return next;
+      });
     } catch (error) {
       console.error('Failed to process selected image', error);
       setImageFile(null);
@@ -282,6 +300,7 @@ export default function SellForm() {
     event.preventDefault();
     setStatus('loading');
     setMessage('');
+    setFieldErrors({});
 
     try {
       const imageUrl = await uploadImage();
@@ -305,10 +324,14 @@ export default function SellForm() {
       });
       const payload = await parseResponsePayload(response);
       if (!response.ok) {
-        const errorMessage =
+        let errorMessage =
           (typeof payload === 'string' && payload) ||
           (payload && typeof payload === 'object' && payload.error) ||
           sell.errors.submitFailed;
+        if (payload && typeof payload === 'object' && payload.fieldErrors) {
+          setFieldErrors(payload.fieldErrors);
+          errorMessage = payload.error || sell.errors.validation;
+        }
         throw new Error(errorMessage);
       }
 
@@ -324,6 +347,9 @@ export default function SellForm() {
       console.error('Listing submission failed', error);
       setStatus('error');
       setMessage(error.message || sell.errors.submitFailed);
+      if (error.message === sell.errors.imageRequired || error.message === sell.errors.imageTooLarge) {
+        setFieldErrors((prev) => ({ ...prev, imageUrl: error.message }));
+      }
     }
   };
 
@@ -360,6 +386,7 @@ export default function SellForm() {
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
                 placeholder={sell.placeholders.title}
               />
+              {fieldErrors.title && <span className="text-xs font-medium text-red-600">{fieldErrors.title}</span>}
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.price}
@@ -373,6 +400,7 @@ export default function SellForm() {
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
                 placeholder={sell.placeholders.price}
               />
+              {fieldErrors.price && <span className="text-xs font-medium text-red-600">{fieldErrors.price}</span>}
             </label>
           </div>
           <div className="grid gap-6 md:grid-cols-3">
@@ -387,6 +415,7 @@ export default function SellForm() {
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
                 placeholder={sell.placeholders.brand}
               />
+              {fieldErrors.brand && <span className="text-xs font-medium text-red-600">{fieldErrors.brand}</span>}
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.model}
@@ -399,6 +428,7 @@ export default function SellForm() {
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
                 placeholder={sell.placeholders.model}
               />
+              {fieldErrors.model && <span className="text-xs font-medium text-red-600">{fieldErrors.model}</span>}
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.year}
@@ -413,6 +443,7 @@ export default function SellForm() {
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
                 placeholder={sell.placeholders.year}
               />
+              {fieldErrors.year && <span className="text-xs font-medium text-red-600">{fieldErrors.year}</span>}
             </label>
           </div>
           <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
@@ -427,6 +458,7 @@ export default function SellForm() {
               placeholder={sell.placeholders.description}
               maxLength={500}
             />
+            {fieldErrors.description && <span className="text-xs font-medium text-red-600">{fieldErrors.description}</span>}
           </label>
           <div className="grid gap-6 md:grid-cols-3">
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
@@ -443,6 +475,7 @@ export default function SellForm() {
                   </option>
                 ))}
               </select>
+              {fieldErrors.condition && <span className="text-xs font-medium text-red-600">{fieldErrors.condition}</span>}
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.location}
@@ -458,6 +491,7 @@ export default function SellForm() {
                   </option>
                 ))}
               </select>
+              {fieldErrors.location && <span className="text-xs font-medium text-red-600">{fieldErrors.location}</span>}
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.category}
@@ -473,6 +507,7 @@ export default function SellForm() {
                   </option>
                 ))}
               </select>
+              {fieldErrors.category && <span className="text-xs font-medium text-red-600">{fieldErrors.category}</span>}
             </label>
           </div>
           <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
@@ -484,8 +519,10 @@ export default function SellForm() {
               onChange={handleFileChange}
               className="rounded-2xl border border-dashed border-coral/60 bg-white/70 px-4 py-6 text-sm text-deep-blue focus:border-coral focus:outline-none"
             />
+            {fieldErrors.imageUrl && <span className="text-xs font-medium text-red-600">{fieldErrors.imageUrl}</span>}
           </label>
           {imagePreview && (
+            /* eslint-disable-next-line @next/next/no-img-element */
             <img
               src={imagePreview}
               alt={sell.previewAlt}

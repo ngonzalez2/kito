@@ -1,21 +1,30 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import useTranslations from '@/hooks/useTranslations';
 import ListingReportButton from './ListingReportButton';
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80';
+const PLACEHOLDER_IMAGE = '/placeholder.svg';
 
 export default function ListingCard({ listing, layout = 'vertical', showStatusTag = false, showReport = false }) {
   const { listings: listingsCopy, sell } = useTranslations();
-  const imageUrl = listing.imageUrl || FALLBACK_IMAGE;
+  const [imageSrc, setImageSrc] = useState(listing.imageUrl || PLACEHOLDER_IMAGE);
   const isHorizontal = layout === 'horizontal';
   const categoryLabel = listing.category ? listingsCopy.categories?.[listing.category] ?? listing.category : null;
   const conditionLabel = listing.condition ? sell?.conditionOptions?.[listing.condition] ?? listing.condition : null;
   const brandModelYear = [listing.brand, listing.model].filter(Boolean).join(' ');
   const hasYear = Boolean(listing.year);
+
+  useEffect(() => {
+    setImageSrc(listing.imageUrl || PLACEHOLDER_IMAGE);
+  }, [listing.imageUrl]);
+
+  const handleImageError = () => {
+    setImageSrc(PLACEHOLDER_IMAGE);
+  };
 
   return (
     <motion.article
@@ -26,12 +35,13 @@ export default function ListingCard({ listing, layout = 'vertical', showStatusTa
     >
       <Link href={`/listings/${listing.id}`} className={isHorizontal ? 'relative w-48 flex-shrink-0' : 'relative h-60 w-full'}>
         <Image
-          src={imageUrl}
+          src={imageSrc}
           alt={listing.title}
           fill
           sizes={isHorizontal ? '200px' : '(min-width: 1024px) 33vw, (min-width: 768px) 50vw, 100vw'}
           className="h-full w-full object-cover"
           priority={false}
+          onError={handleImageError}
         />
       </Link>
       <div className="flex flex-1 flex-col gap-3 p-5">

@@ -88,6 +88,7 @@ const translations = {
     },
     filters: {
       any: 'Cualquiera',
+      clear: 'Limpiar filtros',
       items: [
         {
           label: 'Categoría',
@@ -188,6 +189,7 @@ const translations = {
         submitFailed: 'No se pudo crear la publicación. Intenta de nuevo.',
         imageTooLarge: 'Reduce el archivo a 5MB o menos.',
         imageProcessing: 'No pudimos procesar la imagen. Intenta con otro archivo.',
+        validation: 'Revisa los campos marcados.',
       },
     },
     footer: {
@@ -312,6 +314,7 @@ const translations = {
     },
     filters: {
       any: 'Any',
+      clear: 'Clear filters',
       items: [
         {
           label: 'Category',
@@ -412,6 +415,7 @@ const translations = {
         submitFailed: 'We could not create the listing. Try again.',
         imageTooLarge: 'Image must be 5MB or smaller.',
         imageProcessing: 'We could not process the image. Try another file.',
+        validation: 'Check the highlighted fields.',
       },
     },
     footer: {

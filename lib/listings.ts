@@ -60,6 +60,9 @@ export type CreateListingInput = {
 };
 
 function normalizeFilters(filters: Filters = {}): NormalizedFilters {
+  const trimmedCategory = filters.category?.trim();
+  const trimmedCondition = filters.condition?.trim();
+  const trimmedLocation = filters.location?.trim();
   const trimmedBrand = filters.brand?.trim();
   const trimmedModel = filters.model?.trim();
   const normalizedYear = (() => {
@@ -78,9 +81,9 @@ function normalizeFilters(filters: Filters = {}): NormalizedFilters {
   })();
 
   return {
-    category: filters.category ?? null,
-    condition: filters.condition ?? null,
-    location: filters.location ?? null,
+    category: trimmedCategory ? trimmedCategory : null,
+    condition: trimmedCondition ? trimmedCondition : null,
+    location: trimmedLocation ? trimmedLocation : null,
     brand: trimmedBrand ? trimmedBrand : null,
     model: trimmedModel ? trimmedModel : null,
     year: normalizedYear,
@@ -110,8 +113,18 @@ export async function getApprovedListings(filters: Filters = {}): Promise<Listin
   const brandPattern = brand ? `%${brand}%` : null;
   const modelPattern = model ? `%${model}%` : null;
 
-  return withDb(async () => {
-    const result = await sql`
+  console.info('[DB getApprovedListings] filters %o', {
+    category,
+    condition,
+    location,
+    brand,
+    model,
+    year,
+  });
+
+  try {
+    return await withDb(async () => {
+      const result = await sql`
       SELECT *
       FROM listings
       WHERE status = 'approved'
@@ -122,25 +135,44 @@ export async function getApprovedListings(filters: Filters = {}): Promise<Listin
         AND (${modelPattern}::text IS NULL OR model ILIKE ${modelPattern})
         AND (${year}::int IS NULL OR year = ${year})
       ORDER BY created_at DESC;
-    `;
-    return (result.rows as ListingRecord[]).map(normalizeListing);
-  });
+      `;
+      return (result.rows as ListingRecord[]).map(normalizeListing);
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DB getApprovedListings] failed:', message);
+    throw error;
+  }
 }
 
 export async function getAllListings(): Promise<Listing[]> {
-  return withDb(async () => {
-    const result = await sql`SELECT * FROM listings ORDER BY created_at DESC;`;
-    return (result.rows as ListingRecord[]).map(normalizeListing);
-  });
+  console.info('[DB getAllListings] fetch all listings');
+  try {
+    return await withDb(async () => {
+      const result = await sql`SELECT * FROM listings ORDER BY created_at DESC;`;
+      return (result.rows as ListingRecord[]).map(normalizeListing);
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DB getAllListings] failed:', message);
+    throw error;
+  }
 }
 
 export async function getPendingListings(): Promise<Listing[]> {
-  return withDb(async () => {
-    const result = await sql`
+  console.info('[DB getPendingListings] fetch pending listings');
+  try {
+    return await withDb(async () => {
+      const result = await sql`
       SELECT * FROM listings WHERE status = 'pending' ORDER BY created_at DESC;
     `;
-    return (result.rows as ListingRecord[]).map(normalizeListing);
-  });
+      return (result.rows as ListingRecord[]).map(normalizeListing);
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DB getPendingListings] failed:', message);
+    throw error;
+  }
 }
 
 export async function getListingById(id: number | string): Promise<Listing | null> {
@@ -148,11 +180,18 @@ export async function getListingById(id: number | string): Promise<Listing | nul
   if (!Number.isFinite(listingId)) {
     throw new Error('Invalid listing id');
   }
-  return withDb(async () => {
-    const result = await sql`SELECT * FROM listings WHERE id = ${listingId} LIMIT 1;`;
-    const row = result.rows[0] as ListingRecord | undefined;
-    return row ? normalizeListing(row) : null;
-  });
+  console.info('[DB getListingById] id=%s', listingId);
+  try {
+    return await withDb(async () => {
+      const result = await sql`SELECT * FROM listings WHERE id = ${listingId} LIMIT 1;`;
+      const row = result.rows[0] as ListingRecord | undefined;
+      return row ? normalizeListing(row) : null;
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DB getListingById] failed:', message);
+    throw error;
+  }
 }
 
 export async function createListing(listing: CreateListingInput): Promise<Listing> {
@@ -169,8 +208,10 @@ export async function createListing(listing: CreateListingInput): Promise<Listin
     imageUrl,
   } = listing;
 
-  return withDb(async () => {
-    const result = await sql`
+  console.info('[DB createListing] title=%s price=%s', title, price);
+  try {
+    return await withDb(async () => {
+      const result = await sql`
       INSERT INTO listings (
         title,
         description,
@@ -198,9 +239,14 @@ export async function createListing(listing: CreateListingInput): Promise<Listin
         'pending'
       )
       RETURNING *;
-    `;
-    return normalizeListing(result.rows[0] as ListingRecord);
-  });
+      `;
+      return normalizeListing(result.rows[0] as ListingRecord);
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DB createListing] failed:', message);
+    throw error;
+  }
 }
 
 export async function updateListingStatus(id: number, status: ListingStatus): Promise<Listing | null> {
@@ -211,16 +257,23 @@ export async function updateListingStatus(id: number, status: ListingStatus): Pr
   if (!Number.isFinite(listingId)) {
     throw new Error('Invalid listing id');
   }
-  return withDb(async () => {
-    const result = await sql`
+  console.info('[DB updateListingStatus] id=%s status=%s', listingId, status);
+  try {
+    return await withDb(async () => {
+      const result = await sql`
       UPDATE listings
       SET status = ${status}
       WHERE id = ${listingId}
       RETURNING *;
     `;
-    const row = result.rows[0] as ListingRecord | undefined;
-    return row ? normalizeListing(row) : null;
-  });
+      const row = result.rows[0] as ListingRecord | undefined;
+      return row ? normalizeListing(row) : null;
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DB updateListingStatus] failed:', message);
+    throw error;
+  }
 }
 
 export async function deleteListing(id: number | string): Promise<boolean> {
@@ -228,19 +281,33 @@ export async function deleteListing(id: number | string): Promise<boolean> {
   if (!Number.isFinite(listingId)) {
     throw new Error('Invalid listing id');
   }
-  return withDb(async () => {
-    const result = await sql`DELETE FROM listings WHERE id = ${listingId} RETURNING id;`;
-    return (result.rowCount ?? 0) > 0;
-  });
+  console.info('[DB deleteListing] id=%s', listingId);
+  try {
+    return await withDb(async () => {
+      const result = await sql`DELETE FROM listings WHERE id = ${listingId} RETURNING id;`;
+      return (result.rowCount ?? 0) > 0;
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DB deleteListing] failed:', message);
+    throw error;
+  }
 }
 
 export async function createReport(listingId: number, reason: string) {
-  return withDb(async () => {
-    const result = await sql`
+  console.info('[DB createReport] listingId=%s', listingId);
+  try {
+    return await withDb(async () => {
+      const result = await sql`
       INSERT INTO reports (listing_id, reason)
       VALUES (${listingId}, ${reason})
       RETURNING *;
     `;
-    return result.rows[0];
-  });
+      return result.rows[0];
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[DB createReport] failed:', message);
+    throw error;
+  }
 }

@@ -17,6 +17,10 @@ export async function POST(request) {
       return NextResponse.json({ error: 'No image file provided.' }, { status: 400 });
     }
 
+    if (typeof file.name !== 'string' || !file.name.trim()) {
+      return NextResponse.json({ error: 'File name is required.' }, { status: 400 });
+    }
+
     if (!ALLOWED_MIME_TYPES.includes(file.type)) {
       return NextResponse.json({ error: 'Unsupported file type.' }, { status: 415 });
     }
@@ -29,6 +33,8 @@ export async function POST(request) {
     const safeName = file.name.replace(/[^a-zA-Z0-9.\-]/g, '_');
     const uniqueKey = `listings/${Date.now()}-${safeName}`;
 
+    console.info('[API /upload] storing file %s (%s bytes)', uniqueKey, file.size);
+
     const { url } = await put(uniqueKey, file, {
       access: 'public',
       contentType: file.type || `image/${extension}`,
@@ -36,7 +42,8 @@ export async function POST(request) {
 
     return NextResponse.json({ url });
   } catch (error) {
-    console.error('[POST /api/upload] failed', error);
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[API /upload] POST failed:', message);
     return NextResponse.json({ error: 'Failed to upload image.' }, { status: 500 });
   }
 }

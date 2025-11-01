@@ -19,11 +19,14 @@ export default function FilterBar({ initialFilters = {} }) {
   const searchParams = useSearchParams();
   const { filters: filterCopy } = useTranslations();
   const [selected, setSelected] = useState(() => normalizeSelectedFilters(initialFilters));
+  const filterKeys = ['category', 'condition', 'location', 'brand', 'model', 'year'];
 
   const yearOptions = useMemo(() => {
     const currentYear = new Date().getFullYear();
     return Array.from({ length: 10 }, (_, index) => String(currentYear - index));
   }, []);
+
+  const hasActiveFilters = useMemo(() => Object.values(selected).some((value) => Boolean(value && value.trim())), [selected]);
 
   useEffect(() => {
     setSelected(normalizeSelectedFilters(initialFilters));
@@ -44,6 +47,14 @@ export default function FilterBar({ initialFilters = {} }) {
     const next = { ...selected, [key]: value };
     setSelected(next);
     updateQueryParams(key, value);
+  };
+
+  const handleClear = () => {
+    setSelected(normalizeSelectedFilters({}));
+    const params = new URLSearchParams(searchParams.toString());
+    filterKeys.forEach((key) => params.delete(key));
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
   };
 
   return (
@@ -105,6 +116,17 @@ export default function FilterBar({ initialFilters = {} }) {
           ))}
         </select>
       </label>
+      {hasActiveFilters && (
+        <div className="flex items-center justify-end lg:col-span-5">
+          <button
+            type="button"
+            onClick={handleClear}
+            className="rounded-full border border-coral px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-coral transition hover:bg-coral hover:text-white"
+          >
+            {filterCopy.clear}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

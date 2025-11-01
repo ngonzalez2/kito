@@ -16,7 +16,13 @@ export default async function ListingsPage({ searchParams }) {
     model: searchParams?.model || null,
     year: Number.isFinite(parsedYear) ? parsedYear : null,
   };
-  const listings = await getApprovedListings(filters);
+  let listings = [];
+  try {
+    listings = await getApprovedListings(filters);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[ListingsPage] Failed to fetch listings:', message);
+  }
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-10 px-4 pb-20 pt-6 sm:px-6">
