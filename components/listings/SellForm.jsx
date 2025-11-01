@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import useTranslations from '@/hooks/useTranslations';
 
 const CONDITIONS = ['new', 'excellent', 'good', 'used'];
