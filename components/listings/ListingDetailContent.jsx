@@ -26,6 +26,9 @@ export default function ListingDetailContent({ listing }) {
         </div>
         <p className="text-base leading-relaxed text-deep-blue/80">{listing.description}</p>
         <div className="grid gap-4 sm:grid-cols-3">
+          <DetailStat label={listings.detail.brand} value={listing.brand} />
+          <DetailStat label={listings.detail.model} value={listing.model} />
+          <DetailStat label={listings.detail.year} value={listing.year ? String(listing.year) : null} />
           <DetailStat label={listings.detail.condition} value={conditionLabel} />
           <DetailStat label={listings.detail.location} value={listing.location} />
           <DetailStat label={listings.detail.category} value={categoryLabel} />

@@ -14,6 +14,8 @@ export default function ListingCard({ listing, layout = 'vertical', showStatusTa
   const isHorizontal = layout === 'horizontal';
   const categoryLabel = listing.category ? listingsCopy.categories?.[listing.category] ?? listing.category : null;
   const conditionLabel = listing.condition ? sell?.conditionOptions?.[listing.condition] ?? listing.condition : null;
+  const brandModelYear = [listing.brand, listing.model].filter(Boolean).join(' ');
+  const hasYear = Boolean(listing.year);
 
   return (
     <motion.article
@@ -41,6 +43,13 @@ export default function ListingCard({ listing, layout = 'vertical', showStatusTa
             {'$' + Number(listing.price).toLocaleString('en-US')}
           </span>
         </div>
+        {(brandModelYear || hasYear) && (
+          <p className="text-sm text-gray-500">
+            {brandModelYear}
+            {brandModelYear && hasYear ? ' — ' : ''}
+            {hasYear ? listing.year : ''}
+          </p>
+        )}
         <p className="text-sm text-deep-blue/70 line-clamp-3">{listing.description}</p>
         <div className="flex flex-wrap items-center gap-2 text-xs uppercase tracking-[0.3em] text-deep-blue/60">
           {categoryLabel && <span className="rounded-full bg-sand/40 px-3 py-1 text-deep-blue">{categoryLabel}</span>}

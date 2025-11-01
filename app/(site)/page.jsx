@@ -12,6 +12,9 @@ export default async function HomePage() {
     category: null,
     condition: null,
     location: null,
+    brand: null,
+    model: null,
+    year: null,
   };
 
   let listings = [];

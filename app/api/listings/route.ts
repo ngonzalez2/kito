@@ -20,10 +20,15 @@ type ListingPayload = {
 };
 
 function parseFilters(searchParams: URLSearchParams) {
+  const yearParam = searchParams.get('year');
+  const parsedYear = yearParam ? Number(yearParam) : null;
   return {
     category: searchParams.get('category'),
     condition: searchParams.get('condition'),
     location: searchParams.get('location'),
+    brand: searchParams.get('brand'),
+    model: searchParams.get('model'),
+    year: Number.isFinite(parsedYear) ? parsedYear : null,
   };
 }
 
@@ -47,10 +52,10 @@ function validateListingPayload(payload: Partial<ListingPayload>) {
   if (!payload.category) {
     errors.push('Category is required.');
   }
-  if (!payload.brand) {
+  if (!payload.brand || !payload.brand.trim()) {
     errors.push('Brand is required.');
   }
-  if (!payload.model) {
+  if (!payload.model || !payload.model.trim()) {
     errors.push('Model is required.');
   }
   if (payload.year === undefined || payload.year === null || Number.isNaN(Number(payload.year))) {
@@ -98,8 +103,8 @@ export async function POST(request: Request) {
       condition: payload.condition!,
       location: payload.location!,
       category: payload.category ?? null,
-      brand: payload.brand ?? null,
-      model: payload.model ?? null,
+      brand: payload.brand!.trim(),
+      model: payload.model!.trim(),
       year: Number(payload.year),
       imageUrl: payload.imageUrl ?? null,
     });
