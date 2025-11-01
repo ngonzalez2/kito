@@ -60,6 +60,12 @@ export type CreateListingInput = {
 };
 
 function normalizeFilters(filters: Filters = {}): NormalizedFilters {
+  const trimmedCategory =
+    typeof filters.category === 'string' ? filters.category.trim() : filters.category ?? null;
+  const trimmedCondition =
+    typeof filters.condition === 'string' ? filters.condition.trim() : filters.condition ?? null;
+  const trimmedLocation =
+    typeof filters.location === 'string' ? filters.location.trim() : filters.location ?? null;
   const trimmedBrand = filters.brand?.trim();
   const trimmedModel = filters.model?.trim();
   const normalizedYear = (() => {
@@ -78,9 +84,9 @@ function normalizeFilters(filters: Filters = {}): NormalizedFilters {
   })();
 
   return {
-    category: filters.category ?? null,
-    condition: filters.condition ?? null,
-    location: filters.location ?? null,
+    category: trimmedCategory ? trimmedCategory : null,
+    condition: trimmedCondition ? trimmedCondition : null,
+    location: trimmedLocation ? trimmedLocation : null,
     brand: trimmedBrand ? trimmedBrand : null,
     model: trimmedModel ? trimmedModel : null,
     year: normalizedYear,

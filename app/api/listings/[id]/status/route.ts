@@ -15,11 +15,15 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     if (!assertAdminAccess(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const listingId = Number(params.id);
+    if (!Number.isFinite(listingId)) {
+      return NextResponse.json({ error: 'Invalid listing id' }, { status: 400 });
+    }
     const { status } = (await request.json().catch(() => ({}))) as { status?: unknown };
     if (!status || !isListingStatus(status)) {
       return NextResponse.json({ error: 'Invalid status' }, { status: 400 });
     }
-    const listing = await updateListingStatus(Number(params.id), status);
+    const listing = await updateListingStatus(listingId, status);
     if (!listing) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 });
     }

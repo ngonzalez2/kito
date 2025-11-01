@@ -15,8 +15,7 @@ export default function ListingDetailContent({ listing, previousListing = null, 
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-10 px-4 pb-16 pt-6 sm:px-6">
-      <div className="relative h-[420px] overflow-hidden rounded-3xl shadow-lg">
-        <Image src={imageUrl} alt={listing.title} fill className="h-full w-full object-cover" priority sizes="(min-width: 1024px) 60vw, 100vw" />
+      <div className="flex w-full flex-wrap items-center justify-center gap-4 md:flex-nowrap md:justify-between">
         {previousListing && (
           <ListingNavigationLink
             href={`/listings/${previousListing.id}`}
@@ -25,6 +24,9 @@ export default function ListingDetailContent({ listing, previousListing = null, 
             listingTitle={previousListing.title}
           />
         )}
+        <div className="relative h-[420px] w-full flex-1 overflow-hidden rounded-3xl shadow-lg">
+          <Image src={imageUrl} alt={listing.title} fill className="h-full w-full object-cover" priority sizes="(min-width: 1024px) 60vw, 100vw" />
+        </div>
         {nextListing && (
           <ListingNavigationLink
             href={`/listings/${nextListing.id}`}
@@ -68,7 +70,6 @@ function DetailStat({ label, value }) {
 
 function ListingNavigationLink({ href, direction, label, listingTitle }) {
   const isPrevious = direction === 'previous';
-  const positionClass = isPrevious ? 'left-4' : 'right-4';
   const rotationClass = isPrevious ? '-scale-x-100' : '';
   const hoverTranslationClass = isPrevious ? 'group-hover:-translate-x-0.5' : 'group-hover:translate-x-0.5';
   const accessibleLabel = listingTitle ? `${label}: ${listingTitle}` : label;
@@ -76,7 +77,7 @@ function ListingNavigationLink({ href, direction, label, listingTitle }) {
   return (
     <Link
       href={href}
-      className={`group absolute top-1/2 z-10 flex -translate-y-1/2 items-center justify-center rounded-full bg-white/80 p-3 text-deep-blue shadow-lg backdrop-blur-sm transition hover:bg-white hover:text-coral focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral ${positionClass}`}
+      className={`group flex h-12 w-12 shrink-0 items-center justify-center self-center rounded-full bg-white/80 text-deep-blue shadow-lg backdrop-blur-sm transition hover:bg-white hover:text-coral focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral`}
       aria-label={accessibleLabel}
       title={accessibleLabel}
     >

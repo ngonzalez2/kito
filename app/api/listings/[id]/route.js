@@ -18,13 +18,18 @@ export async function PUT(request, { params }) {
       return unauthorizedResponse();
     }
 
+    const listingId = Number(params.id);
+    if (!Number.isFinite(listingId)) {
+      return NextResponse.json({ error: 'Invalid listing id.' }, { status: 400 });
+    }
+
     const payload = await request.json();
     const nextStatus = payload?.status;
     if (!LISTING_STATUSES.includes(nextStatus)) {
       return NextResponse.json({ error: 'Invalid status provided.' }, { status: 400 });
     }
 
-    const updated = await updateListingStatus(params.id, nextStatus);
+    const updated = await updateListingStatus(listingId, nextStatus);
     if (!updated) {
       return NextResponse.json({ error: 'Listing not found.' }, { status: 404 });
     }
@@ -47,12 +52,17 @@ export async function DELETE(request, { params }) {
       return unauthorizedResponse();
     }
 
-    const listing = await getListingById(params.id);
+    const listingId = Number(params.id);
+    if (!Number.isFinite(listingId)) {
+      return NextResponse.json({ error: 'Invalid listing id.' }, { status: 400 });
+    }
+
+    const listing = await getListingById(listingId);
     if (!listing) {
       return NextResponse.json({ error: 'Listing not found.' }, { status: 404 });
     }
 
-    await deleteListing(params.id);
+    await deleteListing(listingId);
     revalidatePath('/');
     revalidatePath('/listings');
     revalidatePath('/admin');
