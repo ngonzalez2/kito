@@ -6,22 +6,7 @@ import useTranslations from '@/hooks/useTranslations';
 const CONDITIONS = ['new', 'excellent', 'good', 'used'];
 const LOCATIONS = ['La Guajira', 'Barranquilla', 'Cartagena', 'Medellín', 'Bogotá'];
 const CATEGORIES = ['kite', 'board', 'accessories'];
-const KITE_BRANDS = [
-  { name: 'Cabrinha', models: ['Switchblade', 'Moto X', 'Drifter', 'Contra', 'FX2'] },
-  { name: 'Duotone', models: ['Evo', 'Rebel', 'Dice', 'Neo', 'Juice'] },
-  { name: 'North', models: ['Reach', 'Orbit', 'Pulse', 'Carve', 'Code Zero'] },
-  { name: 'Slingshot', models: ['Machine', 'Rally', 'RPM', 'Ghost', 'Raptor'] },
-  { name: 'Naish', models: ['Pivot', 'Slash', 'Triad', 'Dash', 'Ride'] },
-  { name: 'F-One', models: ['Bandit', 'Trigger', 'WTF!?', 'Breeze', 'Bullit'] },
-  { name: 'Core', models: ['XR', 'GTS', 'Nexus', 'Impact', 'Section'] },
-  { name: 'Airush', models: ['Lithium', 'Union', 'Razor', 'Lift', 'Ultra'] },
-  { name: 'Eleveight', models: ['RS', 'FS', 'OS', 'XS', 'PS'] },
-  { name: 'Ozone', models: ['Reo', 'Enduro', 'Edge', 'Catalyst', 'Alpha'] },
-  { name: 'Ocean Rodeo', models: ['Roam', 'Crave', 'Rise', 'Flite', 'Prodigy'] },
-  { name: 'Liquid Force', models: ['NV', 'Solo', 'P1', 'Wow', 'Vortex'] },
-];
 const CURRENT_YEAR = new Date().getFullYear();
-const YEAR_OPTIONS = Array.from({ length: 16 }, (_, index) => String(CURRENT_YEAR - index));
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
 const MAX_CANVAS_DIMENSION = 1800;
 
@@ -141,9 +126,9 @@ export default function SellForm() {
     condition: CONDITIONS[0],
     location: LOCATIONS[0],
     category: CATEGORIES[0],
-    brand: KITE_BRANDS[0]?.name ?? '',
-    model: KITE_BRANDS[0]?.models[0] ?? '',
-    year: YEAR_OPTIONS[0],
+    brand: '',
+    model: '',
+    year: '',
   });
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState('');
@@ -174,9 +159,9 @@ export default function SellForm() {
       condition: CONDITIONS[0],
       location: LOCATIONS[0],
       category: CATEGORIES[0],
-      brand: KITE_BRANDS[0]?.name ?? '',
-      model: KITE_BRANDS[0]?.models[0] ?? '',
-      year: YEAR_OPTIONS[0],
+      brand: '',
+      model: '',
+      year: '',
     });
     setImageFile(null);
     setImagePreview((prev) => {
@@ -198,23 +183,8 @@ export default function SellForm() {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    if (name === 'brand') {
-      const selectedBrand = KITE_BRANDS.find((option) => option.name === value);
-      setFormState((prev) => ({
-        ...prev,
-        brand: value,
-        model: selectedBrand?.models[0] ?? '',
-      }));
-      return;
-    }
-
     setFormState((prev) => ({ ...prev, [name]: value }));
   };
-
-  const availableModels = useMemo(() => {
-    const selectedBrand = KITE_BRANDS.find((option) => option.name === formState.brand);
-    return selectedBrand?.models ?? [];
-  }, [formState.brand]);
 
   useEffect(() => {
     return () => {
@@ -321,14 +291,14 @@ export default function SellForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: formState.title,
-          description: formState.description,
+          title: formState.title.trim(),
+          description: formState.description.trim(),
           price: Number(formState.price),
           condition: formState.condition,
           location: formState.location,
           category: formState.category,
-          brand: formState.brand,
-          model: formState.model,
+          brand: formState.brand.trim(),
+          model: formState.model.trim(),
           year: Number(formState.year),
           imageUrl,
         }),
@@ -408,48 +378,41 @@ export default function SellForm() {
           <div className="grid gap-6 md:grid-cols-3">
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.brand}
-              <select
+              <input
+                required
+                type="text"
                 name="brand"
                 value={formState.brand}
                 onChange={handleInputChange}
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
-              >
-                {KITE_BRANDS.map((option) => (
-                  <option key={option.name} value={option.name}>
-                    {option.name}
-                  </option>
-                ))}
-              </select>
+                placeholder={sell.placeholders.brand}
+              />
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.model}
-              <select
+              <input
+                required
+                type="text"
                 name="model"
                 value={formState.model}
                 onChange={handleInputChange}
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
-              >
-                {availableModels.map((model) => (
-                  <option key={model} value={model}>
-                    {model}
-                  </option>
-                ))}
-              </select>
+                placeholder={sell.placeholders.model}
+              />
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.year}
-              <select
+              <input
+                required
+                type="number"
                 name="year"
                 value={formState.year}
                 onChange={handleInputChange}
+                min="1985"
+                max={CURRENT_YEAR}
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
-              >
-                {YEAR_OPTIONS.map((year) => (
-                  <option key={year} value={year}>
-                    {year}
-                  </option>
-                ))}
-              </select>
+                placeholder={sell.placeholders.year}
+              />
             </label>
           </div>
           <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">

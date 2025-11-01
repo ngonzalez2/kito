@@ -7,10 +7,14 @@ import { getApprovedListings } from '@/lib/listings';
 export const dynamic = 'force-dynamic';
 
 export default async function ListingsPage({ searchParams }) {
+  const parsedYear = searchParams?.year ? Number(searchParams.year) : null;
   const filters = {
     category: searchParams?.category || null,
     condition: searchParams?.condition || null,
     location: searchParams?.location || null,
+    brand: searchParams?.brand || null,
+    model: searchParams?.model || null,
+    year: Number.isFinite(parsedYear) ? parsedYear : null,
   };
   const listings = await getApprovedListings(filters);
 

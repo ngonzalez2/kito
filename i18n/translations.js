@@ -78,6 +78,9 @@ const translations = {
         validation: 'Describe el motivo del reporte.',
       },
       detail: {
+        brand: 'Marca',
+        model: 'Modelo',
+        year: 'Año',
         condition: 'Condición',
         location: 'Ubicación',
         category: 'Categoría',
@@ -117,6 +120,27 @@ const translations = {
           ],
         },
       ],
+      brand: {
+        label: 'Marca',
+        any: 'Todas las marcas',
+        options: [
+          { value: 'Cabrinha', label: 'Cabrinha' },
+          { value: 'North', label: 'North' },
+          { value: 'Duotone', label: 'Duotone' },
+          { value: 'Naish', label: 'Naish' },
+          { value: 'Slingshot', label: 'Slingshot' },
+          { value: 'Core', label: 'Core' },
+          { value: 'F-One', label: 'F-One' },
+        ],
+      },
+      model: {
+        label: 'Modelo',
+        placeholder: 'Ej: Switchblade',
+      },
+      year: {
+        label: 'Año',
+        any: 'Todos los años',
+      },
     },
     sell: {
       heading: 'Publica tu equipo',
@@ -137,6 +161,9 @@ const translations = {
         title: 'Ej. North Reach 9m 2022',
         description: 'Incluye reparaciones, uso y accesorios incluidos…',
         price: 'Ej. 4500000',
+        brand: 'Ej: Cabrinha',
+        model: 'Ej: Switchblade',
+        year: 'Ej: 2021',
       },
       conditionOptions: {
         new: 'Nuevo',
@@ -275,6 +302,9 @@ const translations = {
         validation: 'Please describe the reason for the report.',
       },
       detail: {
+        brand: 'Brand',
+        model: 'Model',
+        year: 'Year',
         condition: 'Condition',
         location: 'Location',
         category: 'Category',
@@ -314,6 +344,27 @@ const translations = {
           ],
         },
       ],
+      brand: {
+        label: 'Brand',
+        any: 'All brands',
+        options: [
+          { value: 'Cabrinha', label: 'Cabrinha' },
+          { value: 'North', label: 'North' },
+          { value: 'Duotone', label: 'Duotone' },
+          { value: 'Naish', label: 'Naish' },
+          { value: 'Slingshot', label: 'Slingshot' },
+          { value: 'Core', label: 'Core' },
+          { value: 'F-One', label: 'F-One' },
+        ],
+      },
+      model: {
+        label: 'Model',
+        placeholder: 'e.g. Switchblade',
+      },
+      year: {
+        label: 'Year',
+        any: 'All years',
+      },
     },
     sell: {
       heading: 'List your gear',
@@ -334,6 +385,9 @@ const translations = {
         title: 'e.g. North Reach 9m 2022',
         description: 'Include maintenance, usage, and any extras…',
         price: 'e.g. 4500000',
+        brand: 'e.g. Cabrinha',
+        model: 'e.g. Switchblade',
+        year: 'e.g. 2021',
       },
       conditionOptions: {
         new: 'New',

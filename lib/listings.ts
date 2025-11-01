@@ -7,6 +7,9 @@ type Filters = {
   category?: string | null;
   condition?: string | null;
   location?: string | null;
+  brand?: string | null;
+  model?: string | null;
+  year?: number | string | null;
 };
 
 type NormalizedFilters = Required<Filters>;
@@ -50,17 +53,37 @@ export type CreateListingInput = {
   condition: string;
   location: string;
   category: string | null;
-  brand?: string | null;
-  model?: string | null;
-  year?: number | null;
+  brand: string | null;
+  model: string | null;
+  year: number | null;
   imageUrl: string | null;
 };
 
 function normalizeFilters(filters: Filters = {}): NormalizedFilters {
+  const trimmedBrand = filters.brand?.trim();
+  const trimmedModel = filters.model?.trim();
+  const normalizedYear = (() => {
+    if (typeof filters.year === 'number') {
+      return Number.isFinite(filters.year) ? filters.year : null;
+    }
+    if (typeof filters.year === 'string') {
+      const trimmedYear = filters.year.trim();
+      if (!trimmedYear) {
+        return null;
+      }
+      const parsed = Number(trimmedYear);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  })();
+
   return {
     category: filters.category ?? null,
     condition: filters.condition ?? null,
     location: filters.location ?? null,
+    brand: trimmedBrand ? trimmedBrand : null,
+    model: trimmedModel ? trimmedModel : null,
+    year: normalizedYear,
   };
 }
 
@@ -83,7 +106,10 @@ function normalizeListing(row: ListingRecord): Listing {
 }
 
 export async function getApprovedListings(filters: Filters = {}): Promise<Listing[]> {
-  const { category, condition, location } = normalizeFilters(filters);
+  const { category, condition, location, brand, model, year } = normalizeFilters(filters);
+  const brandPattern = brand ? `%${brand}%` : null;
+  const modelPattern = model ? `%${model}%` : null;
+
   return withDb(async () => {
     const result = await sql`
       SELECT *
@@ -92,6 +118,9 @@ export async function getApprovedListings(filters: Filters = {}): Promise<Listin
         AND (${category}::text IS NULL OR category = ${category})
         AND (${condition}::text IS NULL OR condition = ${condition})
         AND (${location}::text IS NULL OR location = ${location})
+        AND (${brandPattern}::text IS NULL OR brand ILIKE ${brandPattern})
+        AND (${modelPattern}::text IS NULL OR model ILIKE ${modelPattern})
+        AND (${year}::int IS NULL OR year = ${year})
       ORDER BY created_at DESC;
     `;
     return (result.rows as ListingRecord[]).map(normalizeListing);
@@ -134,15 +163,27 @@ export async function createListing(listing: CreateListingInput): Promise<Listin
     condition,
     location,
     category,
-    brand = null,
-    model = null,
-    year = null,
+    brand,
+    model,
+    year,
     imageUrl,
   } = listing;
 
   return withDb(async () => {
     const result = await sql`
-      INSERT INTO listings (title, description, price, condition, location, category, brand, model, year, image_url, status)
+      INSERT INTO listings (
+        title,
+        description,
+        price,
+        condition,
+        location,
+        category,
+        image_url,
+        brand,
+        model,
+        year,
+        status
+      )
       VALUES (
         ${title},
         ${description},
@@ -150,10 +191,10 @@ export async function createListing(listing: CreateListingInput): Promise<Listin
         ${condition},
         ${location},
         ${category},
+        ${imageUrl},
         ${brand},
         ${model},
         ${year},
-        ${imageUrl},
         'pending'
       )
       RETURNING *;
