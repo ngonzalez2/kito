@@ -128,9 +128,10 @@ export async function POST(request: Request) {
     const payload = await request.json().catch(() => ({}));
     const parsedPayload = listingPayloadSchema.safeParse(payload);
     if (!parsedPayload.success) {
-      const { fieldErrors } = parsedPayload.error.flatten();
+      const flattenResult =
+        'error' in parsedPayload ? parsedPayload.error.flatten() : { fieldErrors: {} };
       const errors = Object.fromEntries(
-        Object.entries(fieldErrors)
+        Object.entries(flattenResult.fieldErrors as Record<string, string[]>)
           .filter(([, messages]) => messages && messages.length > 0)
           .map(([field, messages]) => [field, messages[0]!]),
       ) as Record<string, string>;
