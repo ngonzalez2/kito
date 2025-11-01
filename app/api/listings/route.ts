@@ -44,7 +44,11 @@ function parseFilters(searchParams: URLSearchParams) {
   const rawFilters = Object.fromEntries(searchParams.entries());
   const parsed = queryFilterSchema.safeParse(rawFilters);
   if (!parsed.success) {
-    console.warn('[API /listings] filter parse failed', parsed.error.flatten().fieldErrors);
+    if ('error' in parsed) {
+      console.warn('[API /listings] filter parse failed', parsed.error.flatten().fieldErrors);
+    } else {
+      console.warn('[API /listings] filter parse failed');
+    }
     return {
       category: null,
       condition: null,
