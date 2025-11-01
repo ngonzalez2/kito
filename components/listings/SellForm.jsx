@@ -4,8 +4,21 @@ import { useEffect, useMemo, useState } from 'react';
 import useTranslations from '@/hooks/useTranslations';
 
 const CONDITIONS = ['new', 'excellent', 'good', 'used'];
-const LOCATIONS = ['La Guajira', 'Barranquilla', 'Cartagena', 'Medellín', 'Bogotá'];
+const LOCATIONS = ['La Guajira', 'Barranquilla', 'Cartagena', 'Medellín', 'Bogotá', 'Cali/Calima'];
 const CATEGORIES = ['kite', 'board', 'accessories'];
+const BRAND_MODEL_OPTIONS = {
+  Cabrinha: ['Switchblade', 'Moto X', 'Drifter', 'Contra', 'FX2'],
+  Duotone: ['Evo', 'Dice', 'Rebel', 'Neo', 'Juice'],
+  North: ['Reach', 'Orbit', 'Carve', 'Pulse', 'Nova'],
+  Naish: ['Pivot', 'Slash', 'Triad', 'Boxer', 'Dash'],
+  Slingshot: ['Rally GT', 'RPM', 'Machine', 'Raptor', 'Ghost'],
+  Core: ['XR8', 'GTS6', 'Nexus 3', 'Section 4', 'X-Light'],
+  'F-One': ['Bandit', 'Trigger', 'Breeze', 'Bullit', 'One'],
+  Airush: ['Lithium', 'Lift', 'Union', 'Razor', 'Ultra'],
+  Eleveight: ['RS', 'FS', 'XS', 'WS', 'OS'],
+  'Liquid Force': ['NV', 'P1', 'Solo', 'Wow V4', 'Elite'],
+};
+const BRAND_OPTIONS = Object.keys(BRAND_MODEL_OPTIONS);
 const CURRENT_YEAR = new Date().getFullYear();
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
 const MAX_CANVAS_DIMENSION = 1800;
@@ -120,7 +133,6 @@ const parseResponsePayload = async (response) => {
 export default function SellForm() {
   const { sell } = useTranslations();
   const [formState, setFormState] = useState({
-    title: '',
     description: '',
     price: '',
     condition: CONDITIONS[0],
@@ -135,6 +147,11 @@ export default function SellForm() {
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
   const [pendingListings, setPendingListings] = useState([]);
+  const modelOptions = formState.brand ? BRAND_MODEL_OPTIONS[formState.brand] ?? [] : [];
+  const yearOptions = useMemo(() => {
+    const earliestYear = 2005;
+    return Array.from({ length: CURRENT_YEAR - earliestYear + 1 }, (_, index) => String(CURRENT_YEAR - index));
+  }, [CURRENT_YEAR]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -153,7 +170,6 @@ export default function SellForm() {
 
   const resetForm = () => {
     setFormState({
-      title: '',
       description: '',
       price: '',
       condition: CONDITIONS[0],
@@ -183,7 +199,12 @@ export default function SellForm() {
 
   const handleInputChange = (event) => {
     const { name, value } = event.target;
-    setFormState((prev) => ({ ...prev, [name]: value }));
+    setFormState((prev) => {
+      if (name === 'brand') {
+        return { ...prev, brand: value, model: '' };
+      }
+      return { ...prev, [name]: value };
+    });
   };
 
   useEffect(() => {
@@ -284,6 +305,17 @@ export default function SellForm() {
     setMessage('');
 
     try {
+      const derivedTitle = [formState.brand, formState.model, formState.year]
+        .map((value) => (typeof value === 'string' ? value.trim() : ''))
+        .filter(Boolean)
+        .join(' ');
+      const priceValue = Number(formState.price);
+      const yearValue = Number(formState.year);
+
+      if (!derivedTitle || Number.isNaN(priceValue) || Number.isNaN(yearValue)) {
+        throw new Error(sell.errors.submitFailed);
+      }
+
       const imageUrl = await uploadImage();
       const response = await fetch('/api/listings', {
         method: 'POST',
@@ -291,15 +323,15 @@ export default function SellForm() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          title: formState.title.trim(),
+          title: derivedTitle,
           description: formState.description.trim(),
-          price: Number(formState.price),
+          price: priceValue,
           condition: formState.condition,
           location: formState.location,
           category: formState.category,
           brand: formState.brand.trim(),
           model: formState.model.trim(),
-          year: Number(formState.year),
+          year: yearValue,
           imageUrl,
         }),
       });
@@ -349,17 +381,81 @@ export default function SellForm() {
           <p className="mt-3 text-base text-deep-blue/70">{sell.subheading}</p>
         </div>
         <form onSubmit={handleSubmit} className="grid gap-6 rounded-3xl bg-sky/10 p-8 shadow-lg">
+          <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
+            {sell.fields.category}
+            <select
+              name="category"
+              value={formState.category}
+              onChange={handleInputChange}
+              className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+            >
+              {CATEGORIES.map((option) => (
+                <option key={option} value={option}>
+                  {sell.categoryOptions[option] || option}
+                </option>
+              ))}
+            </select>
+          </label>
           <div className="grid gap-6 md:grid-cols-2">
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
-              {sell.fields.title}
-              <input
+              {sell.fields.brand}
+              <select
                 required
-                name="title"
-                value={formState.title}
+                name="brand"
+                value={formState.brand}
                 onChange={handleInputChange}
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
-                placeholder={sell.placeholders.title}
-              />
+              >
+                <option value="" disabled>
+                  {sell.placeholders.brand}
+                </option>
+                {BRAND_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
+              {sell.fields.model}
+              <select
+                name="model"
+                value={formState.model}
+                onChange={handleInputChange}
+                required={Boolean(formState.brand)}
+                disabled={!formState.brand}
+                className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30 disabled:cursor-not-allowed disabled:bg-white/60 disabled:text-deep-blue/50"
+              >
+                <option value="" disabled>
+                  {sell.placeholders.model}
+                </option>
+                {modelOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="grid gap-6 md:grid-cols-2">
+            <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
+              {sell.fields.year}
+              <select
+                required
+                name="year"
+                value={formState.year}
+                onChange={handleInputChange}
+                className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
+              >
+                <option value="" disabled>
+                  {sell.placeholders.year}
+                </option>
+                {yearOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
             </label>
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.price}
@@ -372,46 +468,6 @@ export default function SellForm() {
                 onChange={handleInputChange}
                 className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
                 placeholder={sell.placeholders.price}
-              />
-            </label>
-          </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
-              {sell.fields.brand}
-              <input
-                required
-                type="text"
-                name="brand"
-                value={formState.brand}
-                onChange={handleInputChange}
-                className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
-                placeholder={sell.placeholders.brand}
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
-              {sell.fields.model}
-              <input
-                required
-                type="text"
-                name="model"
-                value={formState.model}
-                onChange={handleInputChange}
-                className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
-                placeholder={sell.placeholders.model}
-              />
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
-              {sell.fields.year}
-              <input
-                required
-                type="number"
-                name="year"
-                value={formState.year}
-                onChange={handleInputChange}
-                min="1985"
-                max={CURRENT_YEAR}
-                className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
-                placeholder={sell.placeholders.year}
               />
             </label>
           </div>
@@ -428,7 +484,7 @@ export default function SellForm() {
               maxLength={500}
             />
           </label>
-          <div className="grid gap-6 md:grid-cols-3">
+          <div className="grid gap-6 md:grid-cols-2">
             <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
               {sell.fields.condition}
               <select
@@ -455,21 +511,6 @@ export default function SellForm() {
                 {LOCATIONS.map((option) => (
                   <option key={option} value={option}>
                     {option}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-2 text-sm font-semibold uppercase tracking-[0.3em] text-deep-blue">
-              {sell.fields.category}
-              <select
-                name="category"
-                value={formState.category}
-                onChange={handleInputChange}
-                className="rounded-2xl border border-transparent bg-white/80 px-4 py-3 text-base text-deep-blue focus:border-coral focus:outline-none focus:ring-2 focus:ring-coral/30"
-              >
-                {CATEGORIES.map((option) => (
-                  <option key={option} value={option}>
-                    {sell.categoryOptions[option] || option}
                   </option>
                 ))}
               </select>
