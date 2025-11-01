@@ -1,6 +1,6 @@
 import ListingDetailContent from '@/components/listings/ListingDetailContent';
 import ListingsEmptyState from '@/components/listings/ListingsEmptyState';
-import { getListingById } from '@/lib/listings';
+import { getAdjacentApprovedListings, getListingById } from '@/lib/listings';
 
 export const dynamic = 'force-dynamic';
 
@@ -16,5 +16,7 @@ export default async function ListingDetailPage({ params }) {
     );
   }
 
-  return <ListingDetailContent listing={listing} />;
+  const adjacentListings = await getAdjacentApprovedListings(listing.id);
+
+  return <ListingDetailContent listing={listing} previousListing={adjacentListings.previous} nextListing={adjacentListings.next} />;
 }

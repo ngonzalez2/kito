@@ -155,6 +155,56 @@ export async function getListingById(id: number | string): Promise<Listing | nul
   });
 }
 
+export type AdjacentListings = {
+  previous: Listing | null;
+  next: Listing | null;
+};
+
+export async function getAdjacentApprovedListings(id: number | string): Promise<AdjacentListings> {
+  const listingId = Number(id);
+  if (!Number.isFinite(listingId)) {
+    throw new Error('Invalid listing id');
+  }
+
+  return withDb(async () => {
+    const currentResult = await sql`
+      SELECT created_at
+      FROM listings
+      WHERE id = ${listingId}
+      LIMIT 1;
+    `;
+
+    const current = currentResult.rows[0] as { created_at: string } | undefined;
+    if (!current) {
+      return { previous: null, next: null } satisfies AdjacentListings;
+    }
+
+    const previousResult = await sql`
+      SELECT *
+      FROM listings
+      WHERE status = 'approved' AND created_at > ${current.created_at} AND id <> ${listingId}
+      ORDER BY created_at ASC
+      LIMIT 1;
+    `;
+
+    const nextResult = await sql`
+      SELECT *
+      FROM listings
+      WHERE status = 'approved' AND created_at < ${current.created_at} AND id <> ${listingId}
+      ORDER BY created_at DESC
+      LIMIT 1;
+    `;
+
+    const previousRow = previousResult.rows[0] as ListingRecord | undefined;
+    const nextRow = nextResult.rows[0] as ListingRecord | undefined;
+
+    return {
+      previous: previousRow ? normalizeListing(previousRow) : null,
+      next: nextRow ? normalizeListing(nextRow) : null,
+    } satisfies AdjacentListings;
+  });
+}
+
 export async function createListing(listing: CreateListingInput): Promise<Listing> {
   const {
     title,
