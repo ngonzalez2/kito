@@ -2,16 +2,37 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useEffect, useMemo, useState } from 'react';
 import ListingReportButton from './ListingReportButton';
 import useTranslations from '@/hooks/useTranslations';
+import { DEFAULT_LISTING_IMAGE_URL } from '@/lib/constants';
 
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80';
-
-export default function ListingDetailContent({ listing, previousListing = null, nextListing = null }) {
+export default function ListingDetailContent({
+  listing,
+  images = [],
+  previousListing = null,
+  nextListing = null,
+}) {
   const { listings, sell } = useTranslations();
-  const imageUrl = listing.imageUrl || FALLBACK_IMAGE;
   const categoryLabel = listing.category ? listings.categories?.[listing.category] ?? listing.category : null;
   const conditionLabel = listing.condition ? sell?.conditionOptions?.[listing.condition] ?? listing.condition : null;
+  const normalizedImages = useMemo(() => {
+    if (Array.isArray(images) && images.length > 0) {
+      return images.map((image, index) => ({
+        id: image.id ?? index,
+        url: image.imageUrl,
+        isPrimary: Boolean(image.isPrimary),
+      }));
+    }
+    const fallbackUrl = listing.imageUrl || DEFAULT_LISTING_IMAGE_URL;
+    return [
+      {
+        id: 'fallback',
+        url: fallbackUrl,
+        isPrimary: true,
+      },
+    ];
+  }, [images, listing.imageUrl]);
 
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-10 px-4 pb-16 pt-6 sm:px-6">
@@ -24,9 +45,11 @@ export default function ListingDetailContent({ listing, previousListing = null, 
             listingTitle={previousListing.title}
           />
         )}
-        <div className="relative h-[420px] w-full flex-1 overflow-hidden rounded-3xl shadow-lg">
-          <Image src={imageUrl} alt={listing.title} fill className="h-full w-full object-cover" priority sizes="(min-width: 1024px) 60vw, 100vw" />
-        </div>
+        <ListingImageCarousel
+          title={listing.title}
+          images={normalizedImages}
+          navigation={listings.detail?.imageNavigation}
+        />
         {nextListing && (
           <ListingNavigationLink
             href={`/listings/${nextListing.id}`}
@@ -54,6 +77,102 @@ export default function ListingDetailContent({ listing, previousListing = null, 
         </div>
       </div>
       <ListingReportButton listingId={listing.id} />
+    </div>
+  );
+}
+
+function ListingImageCarousel({ title, images, navigation = {} }) {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const normalizedImages = images && images.length > 0 ? images : [{ id: 'fallback', url: DEFAULT_LISTING_IMAGE_URL, isPrimary: true }];
+  const previousLabel = navigation.previous ?? 'Previous image';
+  const nextLabel = navigation.next ?? 'Next image';
+  const goToTemplate = navigation.goTo ?? 'View image {index}';
+
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [images]);
+
+  const clampedIndex = Math.min(Math.max(activeIndex, 0), normalizedImages.length - 1);
+  const current = normalizedImages[clampedIndex];
+
+  const goToIndex = (nextIndex) => {
+    if (normalizedImages.length <= 1) {
+      return;
+    }
+    setActiveIndex(nextIndex);
+  };
+
+  const step = (direction) => {
+    if (normalizedImages.length <= 1) {
+      return;
+    }
+    setActiveIndex((prev) => {
+      const next = (prev + direction + normalizedImages.length) % normalizedImages.length;
+      return next;
+    });
+  };
+
+  return (
+    <div className="relative flex-1">
+      <div className="relative h-[420px] w-full overflow-hidden rounded-3xl shadow-lg">
+        <Image
+          key={current.id}
+          src={current.url}
+          alt={`${title} image ${clampedIndex + 1}`}
+          fill
+          className="h-full w-full object-cover"
+          priority={clampedIndex === 0}
+          sizes="(min-width: 1024px) 60vw, 100vw"
+        />
+        {normalizedImages.length > 1 && (
+          <span className="absolute right-4 top-4 rounded-full bg-black/40 px-3 py-1 text-xs font-semibold text-white">
+            {clampedIndex + 1} / {normalizedImages.length}
+          </span>
+        )}
+      </div>
+      {normalizedImages.length > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={() => step(-1)}
+            className="absolute left-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 text-deep-blue shadow transition hover:bg-white hover:text-coral focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral"
+            aria-label={previousLabel}
+          >
+            <ArrowIcon className="h-5 w-5 -scale-x-100" />
+          </button>
+          <button
+            type="button"
+            onClick={() => step(1)}
+            className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full bg-white/80 p-2 text-deep-blue shadow transition hover:bg-white hover:text-coral focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral"
+            aria-label={nextLabel}
+          >
+            <ArrowIcon className="h-5 w-5" />
+          </button>
+        </>
+      )}
+      {normalizedImages.length > 1 && (
+        <div className="mt-4 flex justify-center gap-2">
+          {normalizedImages.map((image, index) => {
+            const isActive = index === clampedIndex;
+            const goToLabel = goToTemplate.replace('{index}', String(index + 1));
+            return (
+              <button
+                key={image.id ?? index}
+                type="button"
+                onClick={() => goToIndex(index)}
+                className="group h-3 w-3 rounded-full border border-white/60 transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-coral"
+                aria-label={goToLabel}
+              >
+                <span
+                  className={`block h-full w-full rounded-full ${
+                    isActive ? 'bg-coral' : 'bg-white/70 group-hover:bg-white'
+                  }`}
+                />
+              </button>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
