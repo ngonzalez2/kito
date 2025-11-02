@@ -87,8 +87,12 @@ export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const includeAll = searchParams.get('includeAll') === 'true';
+    const statusFilter = searchParams.get('status');
+    const requestingPending = statusFilter === 'pending';
 
-    if (includeAll) {
+    if (includeAll || requestingPending) {
+      console.log('[GET /api/listings] Admin fetch: starting query...');
+
       if (!assertAdminAccess(request)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
@@ -97,10 +101,17 @@ export async function GET(request: Request) {
       return NextResponse.json({ listings: listingsWithImages });
     }
 
-    const listings = await getApprovedListings(parseFilters(searchParams));
-    return NextResponse.json({ listings });
+    const approvedListings = await getApprovedListings(parseFilters(searchParams));
+    return NextResponse.json({ listings: approvedListings });
   } catch (error) {
-    console.error('[GET /api/listings]', error);
+    const err = error as { message?: unknown; stack?: unknown; code?: unknown; detail?: unknown };
+    console.error('🔥 Neon DB ERROR in admin route:', {
+      message: err?.message ?? (error instanceof Error ? error.message : String(error)),
+      code: err?.code,
+      detail: err?.detail,
+      stack: err?.stack ?? (error instanceof Error ? error.stack : undefined),
+      raw: error,
+    });
     return NextResponse.json({ error: 'Failed to load listings' }, { status: 500 });
   }
 }

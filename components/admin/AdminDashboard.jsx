@@ -8,19 +8,27 @@ import useTranslations from '@/hooks/useTranslations';
 const STORAGE_KEY = 'kito-admin-key';
 
 async function fetchPendingListings(key, admin) {
-  const response = await fetch('/api/listings?includeAll=true', {
+  console.log('[AdminDashboard] Fetching pending listings...');
+  const response = await fetch('/api/listings?status=pending', {
     headers: {
       'x-admin-key': key,
     },
     cache: 'no-store',
   });
 
+  console.log('[AdminDashboard] Pending listings response status:', response.status);
+
   if (!response.ok) {
     throw new Error(response.status === 401 ? admin.errors.unauthorized : admin.errors.loadFailed);
   }
 
-  const payload = await response.json();
-  const items = Array.isArray(payload.listings) ? payload.listings : [];
+  const payload = await response
+    .json()
+    .catch((error) => {
+      console.error('[AdminDashboard] Failed to parse listings payload', error);
+      return { listings: [] };
+    });
+  const items = Array.isArray(payload?.listings) ? payload.listings : [];
   return items.filter((listing) => listing.status === 'pending');
 }
 
@@ -53,6 +61,7 @@ export default function AdminDashboard() {
       setError('');
       setFeedback('');
 
+      console.log('[AdminDashboard] Admin key provided (length):', key?.length ?? 0);
       const listings = await fetchPendingListings(key, admin);
 
       setPendingListings(listings);
@@ -84,6 +93,7 @@ export default function AdminDashboard() {
     try {
       setStatus('loading');
       setFeedback('');
+      console.log('[AdminDashboard] Refreshing listings with key length:', key?.length ?? 0);
       const listings = await fetchPendingListings(key, admin);
       setPendingListings(listings);
     } catch (err) {

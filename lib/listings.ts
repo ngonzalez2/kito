@@ -258,10 +258,13 @@ export async function getAllListings(): Promise<Listing[]> {
 
 export async function getPendingListings(): Promise<Listing[]> {
   return withDb(async () => {
+    console.log('🟡 Fetching pending listings from DB...');
     const result = await sql`
       SELECT * FROM listings WHERE status = 'pending' ORDER BY created_at DESC;
     `;
-    return (result.rows as ListingRecord[]).map(normalizeListing);
+    const listings = (result.rows as ListingRecord[]).map(normalizeListing);
+    console.log(`✅ Retrieved ${listings.length} pending listings`);
+    return listings;
   });
 }
 
