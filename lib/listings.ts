@@ -230,6 +230,7 @@ export async function fetchOfficialBrandImage({
     }
 
     return trimmed;
+    return typeof image === 'string' && image ? image : null;
   } catch (error) {
     console.warn('Failed to fetch official brand image', error);
     return null;
@@ -487,6 +488,7 @@ export async function getImagesForListings(listingIds: number[]): Promise<Record
       SELECT *
       FROM listing_images
       WHERE listing_id = ANY(${arrayLiteral}::int[])
+      WHERE listing_id = ANY(${sql.array(uniqueIds, 'int4')})
       ORDER BY listing_id ASC, is_primary DESC, id ASC;
     `;
 

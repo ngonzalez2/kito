@@ -8,6 +8,7 @@ import {
   getApprovedListings,
   getPendingListings,
 } from '@/lib/listings';
+import { attachImagesToListings, createListing, getAllListings, getApprovedListings } from '@/lib/listings';
 
 export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
@@ -109,6 +110,8 @@ export async function GET(request: Request) {
       );
       const listingsWithImages = await attachImagesToListings(listings);
 
+      const listings = await getAllListings();
+      const listingsWithImages = await attachImagesToListings(listings);
       return NextResponse.json({ listings: listingsWithImages });
     }
 
