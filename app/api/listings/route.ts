@@ -1,13 +1,7 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { assertAdminAccess } from '@/lib/auth';
-import {
-  attachImagesToListings,
-  createListing,
-  getAllListings,
-  getApprovedListings,
-  getPendingListings,
-} from '@/lib/listings';
+import { attachImagesToListings, createListing, getAllListings, getApprovedListings } from '@/lib/listings';
 
 export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
@@ -102,14 +96,9 @@ export async function GET(request: Request) {
       if (!assertAdminAccess(request)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-
-      const adminListings = requestingPending ? await getPendingListings() : await getAllListings();
-      console.log(
-        `[GET /api/listings] Admin fetch: got ${adminListings.length} listing(s) with status ${requestingPending ? 'pending' : 'any'}`,
-      );
-      const adminListingsWithImages = await attachImagesToListings(adminListings);
-
-      return NextResponse.json({ listings: adminListingsWithImages });
+      const listings = await getAllListings();
+      const listingsWithImages = await attachImagesToListings(listings);
+      return NextResponse.json({ listings: listingsWithImages });
     }
 
     const approvedListings = await getApprovedListings(parseFilters(searchParams));
