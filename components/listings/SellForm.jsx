@@ -22,6 +22,7 @@ const BRAND_OPTIONS = Object.keys(BRAND_MODEL_OPTIONS);
 const CURRENT_YEAR = new Date().getFullYear();
 const MAX_UPLOAD_SIZE = 5 * 1024 * 1024;
 const MAX_CANVAS_DIMENSION = 1800;
+const MAX_IMAGE_COUNT = 5;
 
 const loadImage = (file) =>
   new Promise((resolve, reject) => {
@@ -142,8 +143,8 @@ export default function SellForm() {
     model: '',
     year: '',
   });
-  const [imageFile, setImageFile] = useState(null);
-  const [imagePreview, setImagePreview] = useState('');
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
   const [status, setStatus] = useState('idle');
   const [message, setMessage] = useState('');
   const [pendingListings, setPendingListings] = useState([]);
@@ -152,6 +153,17 @@ export default function SellForm() {
     const earliestYear = 2005;
     return Array.from({ length: CURRENT_YEAR - earliestYear + 1 }, (_, index) => String(CURRENT_YEAR - index));
   }, [CURRENT_YEAR]);
+
+  const clearImagePreviews = () => {
+    setImagePreviews((prev) => {
+      prev.forEach((preview) => {
+        if (preview) {
+          URL.revokeObjectURL(preview);
+        }
+      });
+      return [];
+    });
+  };
 
   useEffect(() => {
     if (typeof window === 'undefined') {
@@ -179,13 +191,8 @@ export default function SellForm() {
       model: '',
       year: '',
     });
-    setImageFile(null);
-    setImagePreview((prev) => {
-      if (prev) {
-        URL.revokeObjectURL(prev);
-      }
-      return '';
-    });
+    setImageFiles([]);
+    clearImagePreviews();
   };
 
   const savePendingListing = (listing) => {
@@ -209,94 +216,107 @@ export default function SellForm() {
 
   useEffect(() => {
     return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
+      imagePreviews.forEach((preview) => {
+        if (preview) {
+          URL.revokeObjectURL(preview);
+        }
+      });
     };
-  }, [imagePreview]);
+  }, [imagePreviews]);
 
   const handleFileChange = async (event) => {
     const input = event.target;
-    const file = input.files?.[0];
+    const files = Array.from(input.files ?? []);
 
-    if (!file) {
-      setImageFile(null);
-      setImagePreview((prev) => {
-        if (prev) {
-          URL.revokeObjectURL(prev);
-        }
-        return '';
-      });
+    if (!files.length) {
+      setImageFiles([]);
+      clearImagePreviews();
+      setStatus('idle');
+      setMessage('');
       return;
     }
 
-    try {
-      const compressedFile = await compressImageFile(file, MAX_UPLOAD_SIZE);
+    const limitedFiles = files.slice(0, MAX_IMAGE_COUNT);
+    const shouldWarnAboutLimit = files.length > MAX_IMAGE_COUNT;
+    const nextFiles = [];
+    const previewUrls = [];
 
-      if (compressedFile.size > MAX_UPLOAD_SIZE) {
-        setImageFile(null);
-        setImagePreview((prev) => {
-          if (prev) {
-            URL.revokeObjectURL(prev);
-          }
-          return '';
-        });
-        setStatus('error');
-        setMessage(sell.errors.imageTooLarge);
-        input.value = '';
-        return;
+    try {
+      for (const file of limitedFiles) {
+        const compressedFile = await compressImageFile(file, MAX_UPLOAD_SIZE);
+        if (compressedFile.size > MAX_UPLOAD_SIZE) {
+          throw new Error('IMAGE_TOO_LARGE');
+        }
+        nextFiles.push(compressedFile);
+        previewUrls.push(URL.createObjectURL(compressedFile));
       }
 
-      setImageFile(compressedFile);
-      setImagePreview((prev) => {
-        if (prev) {
-          URL.revokeObjectURL(prev);
-        }
-        return URL.createObjectURL(compressedFile);
+      setImageFiles(nextFiles);
+      setImagePreviews((prev) => {
+        prev.forEach((preview) => {
+          if (preview) {
+            URL.revokeObjectURL(preview);
+          }
+        });
+        return previewUrls;
       });
-      setStatus('idle');
-      setMessage('');
+      if (shouldWarnAboutLimit) {
+        setStatus('warning');
+        setMessage(sell.errors.imageLimit ?? 'You can upload up to 5 images.');
+      } else {
+        setStatus('idle');
+        setMessage('');
+      }
     } catch (error) {
-      console.error('Failed to process selected image', error);
-      setImageFile(null);
-      setImagePreview((prev) => {
-        if (prev) {
-          URL.revokeObjectURL(prev);
+      console.error('Failed to process selected images', error);
+      previewUrls.forEach((preview) => {
+        if (preview) {
+          URL.revokeObjectURL(preview);
         }
-        return '';
       });
+      setImageFiles([]);
+      clearImagePreviews();
       setStatus('error');
-      setMessage(sell.errors.imageProcessing);
+      const errorMessage =
+        error?.message === 'IMAGE_TOO_LARGE' ? sell.errors.imageTooLarge : sell.errors.imageProcessing;
+      setMessage(errorMessage);
       input.value = '';
     }
   };
 
-  const uploadImage = async () => {
-    if (!imageFile) {
+  const uploadImages = async () => {
+    if (!imageFiles.length) {
       throw new Error(sell.errors.imageRequired);
     }
 
-    if (imageFile.size > MAX_UPLOAD_SIZE) {
-      throw new Error(sell.errors.imageTooLarge);
+    const uploadedUrls = [];
+
+    for (const file of imageFiles) {
+      if (file.size > MAX_UPLOAD_SIZE) {
+        throw new Error(sell.errors.imageTooLarge);
+      }
+
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const payload = await parseResponsePayload(response);
+      if (!response.ok) {
+        const errorMessage =
+          (typeof payload === 'string' && payload) ||
+          (payload && typeof payload === 'object' && payload.error) ||
+          sell.errors.uploadFailed;
+        throw new Error(errorMessage);
+      }
+      if (!payload || typeof payload !== 'object' || !payload.url) {
+        throw new Error(sell.errors.uploadFailed);
+      }
+      uploadedUrls.push(payload.url);
     }
-    const formData = new FormData();
-    formData.append('file', imageFile);
-    const response = await fetch('/api/upload', {
-      method: 'POST',
-      body: formData,
-    });
-    const payload = await parseResponsePayload(response);
-    if (!response.ok) {
-      const errorMessage =
-        (typeof payload === 'string' && payload) ||
-        (payload && typeof payload === 'object' && payload.error) ||
-        sell.errors.uploadFailed;
-      throw new Error(errorMessage);
-    }
-    if (!payload || typeof payload !== 'object' || !payload.url) {
-      throw new Error(sell.errors.uploadFailed);
-    }
-    return payload.url;
+
+    return uploadedUrls;
   };
 
   const handleSubmit = async (event) => {
@@ -316,7 +336,7 @@ export default function SellForm() {
         throw new Error(sell.errors.submitFailed);
       }
 
-      const imageUrl = await uploadImage();
+      const uploadedUrls = await uploadImages();
       const response = await fetch('/api/listings', {
         method: 'POST',
         headers: {
@@ -332,7 +352,7 @@ export default function SellForm() {
           brand: formState.brand.trim(),
           model: formState.model.trim(),
           year: yearValue,
-          imageUrl,
+          images: uploadedUrls,
         }),
       });
       const payload = await parseResponsePayload(response);
@@ -522,16 +542,25 @@ export default function SellForm() {
               required
               type="file"
               accept="image/jpeg,image/png,image/webp"
+              multiple
               onChange={handleFileChange}
               className="rounded-2xl border border-dashed border-coral/60 bg-white/70 px-4 py-6 text-sm text-deep-blue focus:border-coral focus:outline-none"
             />
           </label>
-          {imagePreview && (
-            <img
-              src={imagePreview}
-              alt={sell.previewAlt}
-              className="h-56 w-full rounded-3xl object-cover"
-            />
+          {sell.imageHint && (
+            <p className="-mt-4 text-xs text-deep-blue/60">{sell.imageHint}</p>
+          )}
+          {imagePreviews.length > 0 && (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {imagePreviews.map((preview, index) => (
+                <img
+                  key={preview}
+                  src={preview}
+                  alt={`${sell.previewAlt} ${index + 1}`}
+                  className="h-40 w-full rounded-3xl object-cover"
+                />
+              ))}
+            </div>
           )}
           <button
             type="submit"
@@ -543,7 +572,11 @@ export default function SellForm() {
           {message && (
             <p
               className={`text-sm font-semibold ${
-                status === 'success' ? 'text-emerald-600' : 'text-red-600'
+                status === 'success'
+                  ? 'text-emerald-600'
+                  : status === 'warning'
+                  ? 'text-yellow-600'
+                  : 'text-red-600'
               }`}
             >
               {message}

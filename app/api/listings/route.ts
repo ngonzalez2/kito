@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
 import { assertAdminAccess } from '@/lib/auth';
-import { createListing, getAllListings, getApprovedListings } from '@/lib/listings';
+import { attachImagesToListings, createListing, getAllListings, getApprovedListings } from '@/lib/listings';
 
 export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
@@ -16,7 +16,8 @@ type ListingPayload = {
   brand: string | null;
   model: string | null;
   year: number | string;
-  imageUrl: string | null;
+  images?: string[];
+  imageUrl?: string | null;
 };
 
 function parseFilters(searchParams: URLSearchParams) {
@@ -61,8 +62,23 @@ function validateListingPayload(payload: Partial<ListingPayload>) {
   if (payload.year === undefined || payload.year === null || Number.isNaN(Number(payload.year))) {
     errors.push('Year must be a valid number.');
   }
-  if (!payload.imageUrl) {
-    errors.push('Image URL is required.');
+  const hasLegacyImageUrl = typeof payload.imageUrl === 'string' && payload.imageUrl.trim().length > 0;
+  const hasImagesArray = Array.isArray(payload.images) && payload.images.length > 0;
+
+  if (!hasLegacyImageUrl && !hasImagesArray) {
+    errors.push('At least one image is required.');
+  }
+
+  if (hasImagesArray) {
+    if (payload.images!.length > 5) {
+      errors.push('You can upload up to 5 images.');
+    }
+    const invalidImage = payload.images!.some(
+      (image) => typeof image !== 'string' || !image || image.trim().length === 0,
+    );
+    if (invalidImage) {
+      errors.push('Image URLs must be non-empty strings.');
+    }
   }
   return errors;
 }
@@ -77,7 +93,8 @@ export async function GET(request: Request) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
       const listings = await getAllListings();
-      return NextResponse.json({ listings });
+      const listingsWithImages = await attachImagesToListings(listings);
+      return NextResponse.json({ listings: listingsWithImages });
     }
 
     const listings = await getApprovedListings(parseFilters(searchParams));
@@ -106,6 +123,9 @@ export async function POST(request: Request) {
       brand: payload.brand!.trim(),
       model: payload.model!.trim(),
       year: Number(payload.year),
+      images: Array.isArray(payload.images)
+        ? payload.images.filter((value): value is string => typeof value === 'string')
+        : [],
       imageUrl: payload.imageUrl ?? null,
     });
 
