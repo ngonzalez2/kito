@@ -220,16 +220,7 @@ export async function fetchOfficialBrandImage({
     }
     const data = (await response.json().catch(() => null)) as { Image?: unknown } | null;
     const image = data?.Image;
-    if (typeof image !== 'string') {
-      return null;
-    }
-
-    const trimmed = image.trim();
-    if (!isAllowedImageUrl(trimmed)) {
-      return null;
-    }
-
-    return trimmed;
+    return typeof image === 'string' && image ? image : null;
   } catch (error) {
     console.warn('Failed to fetch official brand image', error);
     return null;
