@@ -1,0 +1,2 @@
+export const DEFAULT_LISTING_IMAGE_URL =
+  'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80';

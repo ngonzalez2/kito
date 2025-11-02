@@ -5,12 +5,11 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import useTranslations from '@/hooks/useTranslations';
 import ListingReportButton from './ListingReportButton';
-
-const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=800&q=80';
+import { DEFAULT_LISTING_IMAGE_URL } from '@/lib/constants';
 
 export default function ListingCard({ listing, layout = 'vertical', showStatusTag = false, showReport = false }) {
   const { listings: listingsCopy, sell } = useTranslations();
-  const imageUrl = listing.imageUrl || FALLBACK_IMAGE;
+  const imageUrl = listing.imageUrl || DEFAULT_LISTING_IMAGE_URL;
   const isHorizontal = layout === 'horizontal';
   const categoryLabel = listing.category ? listingsCopy.categories?.[listing.category] ?? listing.category : null;
   const conditionLabel = listing.condition ? sell?.conditionOptions?.[listing.condition] ?? listing.condition : null;
