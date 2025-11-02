@@ -86,6 +86,11 @@ const translations = {
         category: 'Categoría',
         previous: 'Ver publicación anterior',
         next: 'Ver publicación siguiente',
+        imageNavigation: {
+          previous: 'Ver imagen anterior',
+          next: 'Ver imagen siguiente',
+          goTo: 'Ver imagen {index}',
+        },
       },
     },
     filters: {
@@ -158,7 +163,7 @@ const translations = {
         brand: 'Marca',
         model: 'Modelo',
         year: 'Año del kite',
-        image: 'Fotografía del equipo',
+        image: 'Fotografías del equipo',
       },
       placeholders: {
         title: 'Ej. North Reach 9m 2022',
@@ -185,12 +190,14 @@ const translations = {
       previewAlt: 'Vista previa de la imagen seleccionada',
       pendingHeader: 'Tus publicaciones en moderación',
       pendingTag: 'Pendiente de moderación',
+      imageHint: 'Puedes subir hasta 5 imágenes. La primera será la portada.',
       errors: {
         imageRequired: 'Agrega al menos una imagen.',
         uploadFailed: 'No se pudo cargar la imagen.',
         submitFailed: 'No se pudo crear la publicación. Intenta de nuevo.',
         imageTooLarge: 'Reduce el archivo a 5MB o menos.',
         imageProcessing: 'No pudimos procesar la imagen. Intenta con otro archivo.',
+        imageLimit: 'Selecciona máximo 5 imágenes.',
       },
     },
     footer: {
@@ -219,10 +226,18 @@ const translations = {
         loadFailed: 'No pudimos cargar las publicaciones.',
         required: 'Ingresa la clave administradora.',
         saveFailed: 'No pudimos actualizar la publicación.',
+        imageUpdate: 'No pudimos actualizar la imagen principal.',
       },
       messages: {
         approved: 'Publicación aprobada.',
         rejected: 'Publicación rechazada.',
+        primaryUpdated: 'Imagen principal actualizada.',
+      },
+      images: {
+        heading: 'Galería de imágenes',
+        primary: 'Principal',
+        setPrimary: 'Establecer como portada',
+        empty: 'Este anuncio aún no tiene imágenes cargadas.',
       },
     },
   },
@@ -313,6 +328,11 @@ const translations = {
         category: 'Category',
         previous: 'View previous listing',
         next: 'View next listing',
+        imageNavigation: {
+          previous: 'View previous image',
+          next: 'View next image',
+          goTo: 'Go to image {index}',
+        },
       },
     },
     filters: {
@@ -385,7 +405,7 @@ const translations = {
         brand: 'Brand',
         model: 'Model',
         year: 'Year',
-        image: 'Gear photo',
+        image: 'Gear photos',
       },
       placeholders: {
         title: 'e.g. North Reach 9m 2022',
@@ -412,12 +432,14 @@ const translations = {
       previewAlt: 'Preview of the selected image',
       pendingHeader: 'Listings awaiting moderation',
       pendingTag: 'Pending moderation',
+      imageHint: 'Upload up to 5 images. The first one becomes the cover.',
       errors: {
         imageRequired: 'Please add an image.',
         uploadFailed: 'Image upload failed.',
         submitFailed: 'We could not create the listing. Try again.',
         imageTooLarge: 'Image must be 5MB or smaller.',
         imageProcessing: 'We could not process the image. Try another file.',
+        imageLimit: 'Select up to 5 images.',
       },
     },
     footer: {
@@ -446,10 +468,18 @@ const translations = {
         loadFailed: 'We could not load the listings.',
         required: 'Enter the admin key.',
         saveFailed: 'We could not update the listing.',
+        imageUpdate: 'We could not update the cover image.',
       },
       messages: {
         approved: 'Listing approved.',
         rejected: 'Listing rejected.',
+        primaryUpdated: 'Cover image updated.',
+      },
+      images: {
+        heading: 'Listing images',
+        primary: 'Primary',
+        setPrimary: 'Set as cover',
+        empty: 'This listing does not have uploaded images yet.',
       },
     },
   },
