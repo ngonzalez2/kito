@@ -388,19 +388,28 @@ export async function createListing(listing: CreateListingInput): Promise<Listin
     let listingImages: ListingImage[] = [];
 
     if (imagesToInsert.length > 0) {
-      const values = imagesToInsert.map((image) => sql`(${listingId}, ${image.url}, ${image.isPrimary})`);
-      await sql`
-        INSERT INTO listing_images (listing_id, image_url, is_primary)
-        VALUES ${sql.join(values, sql`, `)};
-      `;
+      const insertedImages: ListingImageRecord[] = [];
 
-      const imagesResult = await sql`
-        SELECT *
-        FROM listing_images
-        WHERE listing_id = ${listingId}
-        ORDER BY is_primary DESC, id ASC;
-      `;
-      listingImages = (imagesResult.rows as ListingImageRecord[]).map(normalizeListingImage);
+      for (const image of imagesToInsert) {
+        const imageResult = await sql`
+          INSERT INTO listing_images (listing_id, image_url, is_primary)
+          VALUES (${listingId}, ${image.url}, ${image.isPrimary})
+          RETURNING *;
+        `;
+        const inserted = imageResult.rows[0] as ListingImageRecord | undefined;
+        if (inserted) {
+          insertedImages.push(inserted);
+        }
+      }
+
+      insertedImages.sort((a, b) => {
+        if (a.is_primary === b.is_primary) {
+          return a.id - b.id;
+        }
+        return a.is_primary ? -1 : 1;
+      });
+
+      listingImages = insertedImages.map(normalizeListingImage);
     }
 
     return { ...normalizeListing(row), images: listingImages } satisfies ListingWithImages;
