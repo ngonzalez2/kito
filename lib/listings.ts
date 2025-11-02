@@ -452,7 +452,7 @@ export async function getImagesForListings(listingIds: number[]): Promise<Record
     const result = await sql`
       SELECT *
       FROM listing_images
-      WHERE listing_id = ANY(${sql.array(uniqueIds, 'int4')})
+      WHERE listing_id = ANY(${uniqueIds})
       ORDER BY listing_id ASC, is_primary DESC, id ASC;
     `;
 
