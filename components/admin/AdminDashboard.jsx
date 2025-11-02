@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import ListingCard from '@/components/listings/ListingCard';
 import useTranslations from '@/hooks/useTranslations';
@@ -122,6 +123,44 @@ export default function AdminDashboard() {
     }
   };
 
+  const updatePrimaryImage = async (listingId, imageId) => {
+    try {
+      setStatus('saving');
+      setError('');
+      setFeedback('');
+
+      const response = await fetch(`/api/listings/${listingId}/images/${imageId}/primary`, {
+        method: 'PATCH',
+        headers: {
+          'x-admin-key': adminKey,
+        },
+      });
+
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        const message =
+          response.status === 401
+            ? admin.errors.unauthorized
+            : payload?.error || admin.errors.imageUpdate;
+        throw new Error(message);
+      }
+
+      const updatedListing = payload?.listing;
+      if (updatedListing) {
+        setPendingListings((current) =>
+          current.map((item) => (item.id === updatedListing.id ? updatedListing : item)),
+        );
+      }
+      setFeedback(admin.messages.primaryUpdated);
+    } catch (err) {
+      console.error('Failed to update primary image', err);
+      setError(err.message || admin.errors.imageUpdate);
+    } finally {
+      setStatus('idle');
+    }
+  };
+
   const signOut = () => {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem(STORAGE_KEY);
@@ -192,6 +231,12 @@ export default function AdminDashboard() {
           pendingListings.map((listing) => (
             <article key={listing.id} className="rounded-3xl bg-white/90 p-6 shadow-lg">
               <ListingCard listing={listing} layout="horizontal" showStatusTag />
+              <ListingImagesManager
+                listing={listing}
+                labels={admin.images}
+                disabled={status === 'saving'}
+                onSetPrimary={(imageId) => updatePrimaryImage(listing.id, imageId)}
+              />
               <div className="mt-4 flex flex-wrap gap-3">
                 <button
                   type="button"
@@ -214,6 +259,68 @@ export default function AdminDashboard() {
           ))
         )}
       </section>
+    </div>
+  );
+}
+
+function ListingImagesManager({ listing, labels = {}, onSetPrimary, disabled }) {
+  const images = Array.isArray(listing.images) ? listing.images : [];
+  const headingLabel = labels.heading ?? 'Listing images';
+  const emptyLabel = labels.empty ?? 'No images uploaded yet.';
+  const primaryLabel = labels.primary ?? 'Primary';
+  const setPrimaryLabel = labels.setPrimary ?? 'Set as cover';
+
+  if (!images.length) {
+    return (
+      <div className="mt-4 rounded-2xl border border-dashed border-sand/60 bg-white/60 p-4 text-sm text-deep-blue/60">
+        {emptyLabel}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.3em] text-deep-blue/70">{headingLabel}</p>
+      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {images.map((image) => {
+          const isPrimary = Boolean(image.isPrimary);
+          return (
+            <div
+              key={image.id}
+              className={`relative overflow-hidden rounded-2xl border ${
+                isPrimary ? 'border-coral/70 shadow-lg' : 'border-transparent'
+              } bg-white`}
+            >
+              <div className="relative h-32 w-full">
+                <Image
+                  src={image.imageUrl}
+                  alt={listing.title}
+                  fill
+                  className="object-cover"
+                  sizes="200px"
+                />
+                {isPrimary && (
+                  <span className="absolute left-3 top-3 rounded-full bg-coral/90 px-2 py-1 text-[0.65rem] font-semibold uppercase tracking-[0.3em] text-white">
+                    {primaryLabel}
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center justify-end gap-2 px-3 py-2">
+                {!isPrimary && (
+                  <button
+                    type="button"
+                    onClick={() => onSetPrimary(image.id)}
+                    disabled={disabled}
+                    className="rounded-full bg-coral/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.3em] text-coral transition hover:bg-coral/20 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {setPrimaryLabel}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
