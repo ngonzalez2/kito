@@ -478,11 +478,15 @@ export async function getImagesForListings(listingIds: number[]): Promise<Record
     return {};
   }
 
+  // Build a safe Postgres int array literal (e.g. "{1,2,3}") since the runtime client
+  // does not expose helpers such as sql.array.
+  const arrayLiteral = `{${uniqueIds.join(',')}}`;
+
   return withDb(async () => {
     const result = await sql`
       SELECT *
       FROM listing_images
-      WHERE listing_id = ANY(${sql.array(uniqueIds, 'int4')})
+      WHERE listing_id = ANY(${arrayLiteral}::int[])
       ORDER BY listing_id ASC, is_primary DESC, id ASC;
     `;
 
