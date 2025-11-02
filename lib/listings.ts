@@ -1,6 +1,24 @@
 import { DEFAULT_LISTING_IMAGE_URL } from './constants';
 import { withDb, sql } from './db';
 
+const ALLOWED_OFFICIAL_IMAGE_HOSTS = new Set(['external-content.duckduckgo.com']);
+
+function isAllowedImageUrl(url: string): boolean {
+  if (!url) {
+    return false;
+  }
+
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+    return ALLOWED_OFFICIAL_IMAGE_HOSTS.has(parsed.hostname);
+  } catch (error) {
+    return false;
+  }
+}
+
 export const LISTING_STATUSES = ['pending', 'approved', 'rejected'] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
