@@ -10,9 +10,9 @@ import {
 } from '@/lib/listings';
 
 export const runtime = 'nodejs';
-export const preferredRegion = 'iad1';
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+export const preferredRegion = 'iad1';
 
 type ListingPayload = {
   title: string;
