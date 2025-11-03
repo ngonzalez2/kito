@@ -52,6 +52,12 @@ The schema is created automatically on first access by the API routes, so no man
 
 Set `ADMIN_KEY` locally and in Vercel. The `/admin` dashboard prompts for the key, caches it in `localStorage`, and includes it in moderation requests via the `x-admin-key` header.
 
+#### Troubleshooting notes
+
+- Environment variable: `ADMIN_KEY` (set locally and in Vercel before redeploying).
+- Test with curl: `curl -v -H "x-admin-key: kitokiteNgl!0407" https://<your-deploy>/api/admin/ping`
+- After diagnosing access issues, remove the temporary `/api/admin/ping` endpoint and disable admin debug logging.
+
 ### Local image uploads
 
 When running locally, ensure the Blob token has read/write access and that `DATABASE_URL` points to a Vercel Postgres database (or a compatible local Postgres instance).

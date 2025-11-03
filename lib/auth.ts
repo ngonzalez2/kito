@@ -1,22 +1,32 @@
-function resolveAdminKey(): string | null {
-  console.log('🔐 Checking admin key (ADMIN_KEY set?):', !!process.env.ADMIN_KEY);
-  console.log('🔐 Checking admin key (KITO_SUPER_ADMIN_2025 set?):', !!process.env.KITO_SUPER_ADMIN_2025);
-  const envKey = process.env.ADMIN_KEY ?? process.env.KITO_SUPER_ADMIN_2025 ?? null;
-  if (!envKey) {
-    console.error('[auth] Admin key missing. Set ADMIN_KEY or KITO_SUPER_ADMIN_2025.');
-    return null;
+function resolveAdminKey(): string {
+  const expected = process.env.ADMIN_KEY;
+  if (typeof expected !== 'string' || expected.trim().length === 0) {
+    throw new Error(
+      '[auth] ADMIN_KEY environment variable is not set. Provide ADMIN_KEY to enable admin operations.',
+    );
   }
-  return envKey;
+  return expected;
+}
+
+function maskValue(secret: string) {
+  const trimmed = secret.trim();
+  if (!trimmed) {
+    return '';
+  }
+  const length = trimmed.length;
+  const lastFour = trimmed.slice(-4);
+  return `***${lastFour} (len:${length})`;
 }
 
 export function assertAdminAccess(request: Request): boolean {
-  const expected = resolveAdminKey();
-  if (!expected) {
-    return false;
+  const expected = resolveAdminKey().trim();
+  const providedRaw =
+    request.headers.get('x-admin-key') ?? request.headers.get('X-Admin-Key') ?? '';
+  const provided = providedRaw.trim();
+
+  if (process.env.ADMIN_DEBUG === 'true') {
+    console.log('[auth] Admin header received:', maskValue(providedRaw));
   }
 
-  const provided = request.headers.get('x-admin-key') ?? '';
-  console.log('[auth] Admin key provided header present:', Boolean(provided));
-
-  return !!provided && provided === expected;
+  return Boolean(provided) && provided === expected;
 }
