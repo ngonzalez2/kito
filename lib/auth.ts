@@ -1,5 +1,15 @@
+import { hasAdminSession } from '@/lib/adminSession';
+
 export function isAdminAuthDisabled(): boolean {
-  return process.env.DISABLE_ADMIN_AUTH?.toLowerCase() === 'true';
+  return (process.env.DISABLE_ADMIN_AUTH || '').toLowerCase() === 'true';
+}
+
+export function headerKeyMatches(req: Request): boolean {
+  const required = (process.env.ADMIN_KEY || '').trim();
+  if (!required) return false;
+  const provided =
+    req.headers.get('x-admin-key')?.trim() || req.headers.get('X-Admin-Key')?.trim() || '';
+  return provided.length > 0 && provided === required;
 }
 
 export function assertAdminAccessFromRequest(request: Request): boolean {
@@ -7,19 +17,14 @@ export function assertAdminAccessFromRequest(request: Request): boolean {
     return true;
   }
 
-  const requiredKey = process.env.ADMIN_KEY?.trim();
-  if (!requiredKey) {
-    console.warn('[auth] ADMIN_KEY not set but auth enabled. Denying access.');
-    return false;
+  if (hasAdminSession(request)) {
+    return true;
   }
 
-  const providedKey =
-    request.headers.get('x-admin-key')?.trim() ?? request.headers.get('X-Admin-Key')?.trim() ?? '';
-
-  const isAuthorized = providedKey.length > 0 && providedKey === requiredKey;
-  if (!isAuthorized) {
-    console.warn('[auth] Invalid or missing x-admin-key.');
+  if (headerKeyMatches(request)) {
+    return true;
   }
 
-  return isAuthorized;
+  console.warn('[auth] Missing valid admin authentication.');
+  return false;
 }

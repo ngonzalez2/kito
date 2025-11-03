@@ -3,6 +3,9 @@ import { revalidatePath } from 'next/cache';
 import { assertAdminAccessFromRequest } from '@/lib/auth';
 import { LISTING_STATUSES, deleteListing, getListingById, updateListingStatus } from '@/lib/listings';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 async function sendModerationNotification(listing, status) {
   // Placeholder for integration with Vercel's email API or any notification provider.
   console.info(`Listing ${listing.id} (${listing.title}) status changed to ${status}.`);

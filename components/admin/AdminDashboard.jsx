@@ -5,6 +5,14 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import ListingCard from '@/components/listings/ListingCard';
 import useTranslations from '@/hooks/useTranslations';
 
+class AdminRequestError extends Error {
+  constructor(message, status) {
+    super(message);
+    this.name = 'AdminRequestError';
+    this.status = status;
+  }
+}
+
 async function fetchAllListings(admin) {
   console.log('[AdminDashboard] Fetching all listings...');
   const response = await fetch('/api/listings?includeAll=true', {
@@ -29,7 +37,7 @@ async function fetchAllListings(admin) {
         ? payload.error.trim()
         : '';
     const message = details ? `${baseMessage} (${details})` : baseMessage;
-    throw new Error(message);
+    throw new AdminRequestError(message, response.status);
   }
 
   if (!payload || !Array.isArray(payload.listings)) {
@@ -44,6 +52,8 @@ export default function AdminDashboard() {
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
+  const [adminKey, setAdminKey] = useState('');
+  const [needsLogin, setNeedsLogin] = useState(false);
 
   const refreshListings = useCallback(async () => {
     try {
@@ -53,9 +63,16 @@ export default function AdminDashboard() {
       console.log('[AdminDashboard] Refreshing listings...');
       const fetchedListings = await fetchAllListings(admin);
       setListings(fetchedListings);
+      setNeedsLogin(false);
     } catch (err) {
       console.error('Failed to refresh listings', err);
-      setError(err.message || admin.errors.loadFailed);
+      if (err instanceof AdminRequestError && err.status === 401) {
+        setNeedsLogin(true);
+        setListings([]);
+        setError(err.message || admin.errors.unauthorized);
+      } else {
+        setError(err?.message || admin.errors.loadFailed);
+      }
     } finally {
       setStatus('idle');
     }
@@ -64,6 +81,51 @@ export default function AdminDashboard() {
   useEffect(() => {
     refreshListings();
   }, [refreshListings]);
+
+  const handleLogin = useCallback(
+    async (event) => {
+      event.preventDefault();
+      setError('');
+      setFeedback('');
+      setStatus('authenticating');
+      try {
+        const response = await fetch('/api/admin/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ key: adminKey }),
+        });
+        if (!response.ok) {
+          setNeedsLogin(true);
+          setError('Clave incorrecta.');
+          return;
+        }
+        setAdminKey('');
+        setNeedsLogin(false);
+        await refreshListings();
+      } catch (err) {
+        console.error('Failed to login admin', err);
+        setError(admin.errors.loadFailed);
+      } finally {
+        setStatus('idle');
+      }
+    },
+    [admin.errors.loadFailed, adminKey, refreshListings],
+  );
+
+  const handleLogout = useCallback(async () => {
+    setFeedback('');
+    setError('');
+    setStatus('authenticating');
+    try {
+      await fetch('/api/admin/logout', { method: 'POST' });
+    } catch (err) {
+      console.error('Failed to logout admin', err);
+    } finally {
+      setStatus('idle');
+      setNeedsLogin(true);
+      setListings([]);
+    }
+  }, []);
 
   const updateListingStatus = async (id, nextStatus) => {
     try {
@@ -82,6 +144,9 @@ export default function AdminDashboard() {
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setNeedsLogin(true);
+        }
         throw new Error(
           response.status === 401
             ? admin.errors.unauthorized
@@ -140,6 +205,9 @@ export default function AdminDashboard() {
       const payload = await response.json().catch(() => ({}));
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setNeedsLogin(true);
+        }
         const message =
           response.status === 401
             ? admin.errors.unauthorized
@@ -198,6 +266,7 @@ export default function AdminDashboard() {
   ];
   const statusLabelText = admin.statusLabel ?? 'Status:';
   const statusValueCopy = admin.statusValues ?? {};
+  const isBusy = status === 'saving' || status === 'loading' || status === 'authenticating';
 
   return (
     <div className="flex flex-col gap-6">
@@ -209,16 +278,47 @@ export default function AdminDashboard() {
         <button
           type="button"
           onClick={() => refreshListings()}
-          disabled={status === 'saving' || status === 'loading'}
+          disabled={isBusy}
           className="rounded-full border border-deep-blue/20 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-deep-blue disabled:cursor-not-allowed disabled:opacity-60"
         >
           {status === 'loading' ? admin.actions.refreshing : admin.actions.refresh}
         </button>
+        {!needsLogin && (
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={isBusy}
+            className="rounded-full border border-deep-blue/20 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-deep-blue disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Cerrar sesión
+          </button>
+        )}
       </div>
       {feedback && <p className="text-sm text-emerald-600">{feedback}</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
+      {needsLogin && (
+        <form onSubmit={handleLogin} className="mx-auto flex w-full max-w-sm flex-col gap-3 rounded-3xl border border-deep-blue/20 bg-white/80 p-6 shadow-sm">
+          <label className="text-xs font-semibold uppercase tracking-[0.3em] text-deep-blue/70">
+            Clave de administrador
+            <input
+              type="password"
+              value={adminKey}
+              onChange={(e) => setAdminKey(e.target.value)}
+              className="mt-2 w-full rounded-full border border-deep-blue/30 px-3 py-2 text-sm text-deep-blue focus:border-deep-blue focus:outline-none"
+              placeholder="Ingresa tu ADMIN_KEY"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={!adminKey || isBusy}
+            className="rounded-full bg-deep-blue px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            Entrar
+          </button>
+        </form>
+      )}
       <section className="flex flex-col gap-6">
-        {sortedListings.length === 0 ? (
+        {!needsLogin && (sortedListings.length === 0 ? (
           <p className="rounded-3xl border border-dashed border-sand/60 bg-white/60 p-8 text-center text-sm text-deep-blue/70">
             {admin.empty}
           </p>
@@ -258,7 +358,7 @@ export default function AdminDashboard() {
               </div>
             </article>
           ))
-        )}
+        ))}
       </section>
     </div>
   );
