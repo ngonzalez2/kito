@@ -19,7 +19,7 @@ function isAllowedImageUrl(url: string): boolean {
   }
 }
 
-export const LISTING_STATUSES = ['pending', 'approved', 'rejected'] as const;
+export const LISTING_STATUSES = ['pending', 'approved', 'sold', 'rejected'] as const;
 export type ListingStatus = (typeof LISTING_STATUSES)[number];
 
 type Filters = {
