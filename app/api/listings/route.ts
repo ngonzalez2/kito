@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { assertAdminAccessFromRequest } from '@/lib/auth';
+import { hasAdminSession } from '@/lib/adminSession';
+import { headerKeyMatches, isAdminAuthDisabled } from '@/lib/auth';
 import {
   attachImagesToListings,
   createListing,
@@ -10,6 +11,8 @@ import {
 
 export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 type ListingPayload = {
   title: string;
@@ -95,10 +98,15 @@ export async function GET(request: Request) {
     const filter = url.searchParams.get('filter') ?? url.searchParams.get('status');
     const requestingPending = filter === 'pending';
 
-    if (includeAll || requestingPending) {
+    const wantsAdminScope = includeAll || requestingPending;
+
+    if (wantsAdminScope) {
       console.log('[GET /api/listings] Admin fetch: starting query...');
 
-      if (!assertAdminAccessFromRequest(request)) {
+      const authed =
+        isAdminAuthDisabled() || hasAdminSession(request) || headerKeyMatches(request);
+
+      if (!authed) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
 

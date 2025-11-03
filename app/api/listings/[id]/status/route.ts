@@ -5,6 +5,8 @@ import { updateListingStatus, LISTING_STATUSES, ListingStatus } from '@/lib/list
 
 export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 function isListingStatus(value: unknown): value is ListingStatus {
   return LISTING_STATUSES.includes(value as ListingStatus);

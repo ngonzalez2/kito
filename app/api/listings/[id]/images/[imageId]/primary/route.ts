@@ -5,6 +5,8 @@ import { setListingPrimaryImage } from '@/lib/listings';
 
 export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export async function PATCH(
   request: Request,
