@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { assertAdminAccess } from '@/lib/auth';
-import { attachImagesToListings, createListing, getAllListings, getApprovedListings } from '@/lib/listings';
+import { assertAdminAccessFromRequest } from '@/lib/auth';
+import {
+  attachImagesToListings,
+  createListing,
+  getAllListings,
+  getPublicListings,
+} from '@/lib/listings';
 
 export const runtime = 'nodejs';
 export const preferredRegion = 'iad1';
@@ -85,24 +90,25 @@ function validateListingPayload(payload: Partial<ListingPayload>) {
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const includeAll = searchParams.get('includeAll') === 'true';
-    const statusFilter = searchParams.get('status');
-    const requestingPending = statusFilter === 'pending';
+    const url = new URL(request.url);
+    const includeAll = url.searchParams.get('includeAll') === 'true';
+    const filter = url.searchParams.get('filter') ?? url.searchParams.get('status');
+    const requestingPending = filter === 'pending';
 
     if (includeAll || requestingPending) {
       console.log('[GET /api/listings] Admin fetch: starting query...');
 
-      if (!assertAdminAccess(request)) {
+      if (!assertAdminAccessFromRequest(request)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
-      const listings = await getAllListings();
+
+      const listings = await getAllListings({ pendingOnly: requestingPending });
       const listingsWithImages = await attachImagesToListings(listings);
-      return NextResponse.json({ listings: listingsWithImages });
+      return NextResponse.json({ listings: listingsWithImages }, { status: 200 });
     }
 
-    const approvedListings = await getApprovedListings(parseFilters(searchParams));
-    return NextResponse.json({ listings: approvedListings });
+    const publicListings = await getPublicListings(parseFilters(url.searchParams));
+    return NextResponse.json({ listings: publicListings }, { status: 200 });
   } catch (error) {
     const err = error as { message?: unknown; stack?: unknown; code?: unknown; detail?: unknown };
     console.error('🔥 Neon DB ERROR in admin route:', {

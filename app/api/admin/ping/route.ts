@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
-import { assertAdminAccess } from '@/lib/auth';
+import { assertAdminAccessFromRequest } from '@/lib/auth';
 
 export async function GET(request: Request) {
-  const ok = assertAdminAccess(request);
+  const ok = assertAdminAccessFromRequest(request);
   return NextResponse.json({ ok });
 }

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { assertAdminAccess } from '@/lib/auth';
+import { assertAdminAccessFromRequest } from '@/lib/auth';
 import { LISTING_STATUSES, deleteListing, getListingById, updateListingStatus } from '@/lib/listings';
 
 async function sendModerationNotification(listing, status) {
@@ -14,7 +14,7 @@ function unauthorizedResponse() {
 
 export async function PUT(request, { params }) {
   try {
-    if (!assertAdminAccess(request)) {
+    if (!assertAdminAccessFromRequest(request)) {
       return unauthorizedResponse();
     }
 
@@ -48,7 +48,7 @@ export async function PUT(request, { params }) {
 
 export async function DELETE(request, { params }) {
   try {
-    if (!assertAdminAccess(request)) {
+    if (!assertAdminAccessFromRequest(request)) {
       return unauthorizedResponse();
     }
 

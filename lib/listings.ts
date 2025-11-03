@@ -1,5 +1,5 @@
 import { DEFAULT_LISTING_IMAGE_URL } from './constants';
-import { withDb, sql } from './db';
+import { withDb } from './db';
 
 const ALLOWED_OFFICIAL_IMAGE_HOSTS = new Set(['external-content.duckduckgo.com']);
 
@@ -232,7 +232,7 @@ export async function getApprovedListings(filters: Filters = {}): Promise<Listin
   const brandPattern = brand ? `%${brand}%` : null;
   const modelPattern = model ? `%${model}%` : null;
 
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const result = await sql`
       SELECT *
       FROM listings
@@ -249,15 +249,26 @@ export async function getApprovedListings(filters: Filters = {}): Promise<Listin
   });
 }
 
-export async function getAllListings(): Promise<Listing[]> {
-  return withDb(async () => {
+export async function getAllListings(options: { pendingOnly?: boolean } = {}): Promise<Listing[]> {
+  return withDb(async (sql) => {
+    if (options.pendingOnly) {
+      const result = await sql`
+        SELECT * FROM listings WHERE status = 'pending' ORDER BY created_at DESC;
+      `;
+      return (result.rows as ListingRecord[]).map(normalizeListing);
+    }
+
     const result = await sql`SELECT * FROM listings ORDER BY created_at DESC;`;
     return (result.rows as ListingRecord[]).map(normalizeListing);
   });
 }
 
+export async function getPublicListings(filters: Filters = {}): Promise<Listing[]> {
+  return getApprovedListings(filters);
+}
+
 export async function getPendingListings(): Promise<Listing[]> {
-  return withDb(async () => {
+  return withDb(async (sql) => {
     console.log('🟡 Fetching pending listings from DB...');
     const result = await sql`
       SELECT * FROM listings WHERE status = 'pending' ORDER BY created_at DESC;
@@ -273,7 +284,7 @@ export async function getListingById(id: number | string): Promise<Listing | nul
   if (!Number.isFinite(listingId)) {
     throw new Error('Invalid listing id');
   }
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const result = await sql`SELECT * FROM listings WHERE id = ${listingId} LIMIT 1;`;
     const row = result.rows[0] as ListingRecord | undefined;
     return row ? normalizeListing(row) : null;
@@ -291,7 +302,7 @@ export async function getAdjacentApprovedListings(id: number | string): Promise<
     throw new Error('Invalid listing id');
   }
 
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const currentResult = await sql`
       SELECT created_at
       FROM listings
@@ -373,7 +384,7 @@ export async function createListing(listing: CreateListingInput): Promise<Listin
   const coverImageUrl =
     imagesToInsert.find((image) => image.isPrimary)?.url ?? fallbackImageUrl ?? DEFAULT_LISTING_IMAGE_URL;
 
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const result = await sql`
       INSERT INTO listings (
         title,
@@ -443,7 +454,7 @@ export async function getListingImages(id: number | string): Promise<ListingImag
     throw new Error('Invalid listing id');
   }
 
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const result = await sql`
       SELECT *
       FROM listing_images
@@ -469,7 +480,7 @@ export async function getImagesForListings(listingIds: number[]): Promise<Record
     return {};
   }
 
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const result = await sql`
       SELECT *
       FROM listing_images
@@ -509,7 +520,7 @@ export async function setListingPrimaryImage(
     throw new Error('Invalid listing or image id');
   }
 
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const targetResult = await sql`
       SELECT *
       FROM listing_images
@@ -557,7 +568,7 @@ export async function updateListingStatus(id: number, status: ListingStatus): Pr
   if (!Number.isFinite(listingId)) {
     throw new Error('Invalid listing id');
   }
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const result = await sql`
       UPDATE listings
       SET status = ${status}
@@ -574,14 +585,14 @@ export async function deleteListing(id: number | string): Promise<boolean> {
   if (!Number.isFinite(listingId)) {
     throw new Error('Invalid listing id');
   }
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const result = await sql`DELETE FROM listings WHERE id = ${listingId} RETURNING id;`;
     return (result.rowCount ?? 0) > 0;
   });
 }
 
 export async function createReport(listingId: number, reason: string) {
-  return withDb(async () => {
+  return withDb(async (sql) => {
     const result = await sql`
       INSERT INTO reports (listing_id, reason)
       VALUES (${listingId}, ${reason})

@@ -7,21 +7,35 @@ import useTranslations from '@/hooks/useTranslations';
 
 async function fetchAllListings(admin) {
   console.log('[AdminDashboard] Fetching all listings...');
-  const response = await fetch('/api/listings?includeAll=true', { cache: 'no-store' });
+  const response = await fetch('/api/listings?includeAll=true', {
+    method: 'GET',
+    cache: 'no-store',
+  });
 
   console.log('[AdminDashboard] Listings response status:', response.status);
 
-  if (!response.ok) {
-    throw new Error(response.status === 401 ? admin.errors.unauthorized : admin.errors.loadFailed);
+  let payload;
+  try {
+    payload = await response.json();
+  } catch (error) {
+    console.error('[AdminDashboard] Failed to parse listings payload', error);
+    payload = null;
   }
 
-  const payload = await response
-    .json()
-    .catch((error) => {
-      console.error('[AdminDashboard] Failed to parse listings payload', error);
-      return { listings: [] };
-    });
-  return Array.isArray(payload?.listings) ? payload.listings : [];
+  if (!response.ok) {
+    const baseMessage = response.status === 401 ? admin.errors.unauthorized : admin.errors.loadFailed;
+    const details =
+      payload && typeof payload === 'object' && typeof payload.error === 'string' && payload.error.trim()
+        ? payload.error.trim()
+        : '';
+    const message = details ? `${baseMessage} (${details})` : baseMessage;
+    throw new Error(message);
+  }
+
+  if (!payload || !Array.isArray(payload.listings)) {
+    return [];
+  }
+  return payload.listings;
 }
 
 export default function AdminDashboard() {

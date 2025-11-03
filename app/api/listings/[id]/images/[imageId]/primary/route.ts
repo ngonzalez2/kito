@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { assertAdminAccess } from '@/lib/auth';
+import { assertAdminAccessFromRequest } from '@/lib/auth';
 import { setListingPrimaryImage } from '@/lib/listings';
 
 export const runtime = 'nodejs';
@@ -11,7 +11,7 @@ export async function PATCH(
   { params }: { params: { id: string; imageId: string } },
 ) {
   try {
-    if (!assertAdminAccess(request)) {
+    if (!assertAdminAccessFromRequest(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
