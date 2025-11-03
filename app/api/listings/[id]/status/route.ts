@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { revalidatePath } from 'next/cache';
-import { assertAdminAccess } from '@/lib/auth';
+import { assertAdminAccessFromRequest } from '@/lib/auth';
 import { updateListingStatus, LISTING_STATUSES, ListingStatus } from '@/lib/listings';
 
 export const runtime = 'nodejs';
@@ -12,7 +12,7 @@ function isListingStatus(value: unknown): value is ListingStatus {
 
 export async function PATCH(request: Request, { params }: { params: { id: string } }) {
   try {
-    if (!assertAdminAccess(request)) {
+    if (!assertAdminAccessFromRequest(request)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
     const listingId = Number(params.id);

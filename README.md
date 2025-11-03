@@ -1,6 +1,6 @@
 # Kito Marketplace (Next.js)
 
-This branch migrates the Kito marketplace to the Next.js App Router and introduces dynamic listings backed by Vercel Postgres, Blob storage uploads, and an admin moderation workflow that runs entirely on Vercel.
+This branch migrates the Kito marketplace to the Next.js App Router and introduces dynamic listings backed by Neon Postgres, Blob storage uploads, and an admin moderation workflow that runs entirely on Vercel.
 
 ## Getting started
 
@@ -11,9 +11,10 @@ npm run dev
 
 Copy `.env.local.example` to `.env.local` and set the required secrets:
 
-- `DATABASE_URL` – Vercel Postgres connection string
+- `DATABASE_URL` – Postgres connection string (Neon recommended)
 - `BLOB_READ_WRITE_TOKEN` – Vercel Blob read/write token
-- `ADMIN_KEY` – password for the `/admin` dashboard
+- `DISABLE_ADMIN_AUTH` – set to `true` to bypass admin auth (ideal for development)
+- `ADMIN_KEY` – optional password for the `/admin` dashboard when auth is enabled
 
 ## Database schema
 
@@ -50,22 +51,22 @@ The schema is created automatically on first access by the API routes, so no man
 
 ### Admin access
 
-Set `ADMIN_KEY` locally and in Vercel. The `/admin` dashboard prompts for the key, caches it in `localStorage`, and includes it in moderation requests via the `x-admin-key` header.
+Set `DISABLE_ADMIN_AUTH="true"` locally (and in Vercel if you want to temporarily bypass authentication). When the flag is not enabled, configure `ADMIN_KEY` and include it with admin API requests using the `x-admin-key` header.
 
 #### Troubleshooting notes
 
-- Environment variable: `ADMIN_KEY` (set locally and in Vercel before redeploying).
-- Test with curl: `curl -v -H "x-admin-key: kitokiteNgl!0407" https://<your-deploy>/api/admin/ping`
-- After diagnosing access issues, remove the temporary `/api/admin/ping` endpoint and disable admin debug logging.
+- Environment variables: `DISABLE_ADMIN_AUTH` and `ADMIN_KEY` (only required when auth is enabled).
+- Test with curl: `curl -v -H "x-admin-key: <your key>" https://<your-deploy>/api/admin/ping`
+- After diagnosing access issues, you can disable the health check routes or admin debug logging if not needed.
 
 ### Local image uploads
 
-When running locally, ensure the Blob token has read/write access and that `DATABASE_URL` points to a Vercel Postgres database (or a compatible local Postgres instance).
+When running locally, ensure the Blob token has read/write access and that `DATABASE_URL` points to your Neon Postgres database (or a compatible local Postgres instance).
 
 ## Tech stack
 
 - Next.js 14 App Router
-- Vercel Postgres & `@vercel/postgres`
+- Neon Postgres & `@vercel/postgres`
 - Vercel Blob storage
 - Tailwind CSS & Framer Motion
 - React context for bilingual (ES/EN) UI

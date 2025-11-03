@@ -10,6 +10,7 @@ type SqlArrayHelper = {
 
 declare const sql: SqlTag & SqlArrayHelper;
 
+export declare function getSql(): typeof sql;
 export declare function withDb<T>(callback: (sql: typeof sql) => Promise<T>): Promise<T>;
 
 export { sql };
