@@ -57,6 +57,7 @@ const translations = {
       status: {
         pending: 'Pendiente',
         approved: 'Aprobado',
+        sold: 'Vendido',
         rejected: 'Rechazado',
       },
       categories: {
@@ -215,8 +216,10 @@ const translations = {
       dashboardSubtitle: 'Aprueba o rechaza las publicaciones enviadas por la comunidad.',
       empty: 'No hay publicaciones para moderar por ahora.',
       actions: {
-        approve: 'Aprobar',
-        reject: 'Rechazar',
+        markApproved: 'Aprobar',
+        markPending: 'Marcar pendiente',
+        markSold: 'Marcar vendido',
+        markRejected: 'Rechazar',
         refresh: 'Actualizar',
         refreshing: 'Actualizando…',
         signOut: 'Cerrar sesión',
@@ -229,9 +232,21 @@ const translations = {
         imageUpdate: 'No pudimos actualizar la imagen principal.',
       },
       messages: {
-        approved: 'Publicación aprobada.',
-        rejected: 'Publicación rechazada.',
+        statusUpdated: {
+          pending: 'Publicación movida a pendiente.',
+          approved: 'Publicación aprobada.',
+          sold: 'Publicación marcada como vendida.',
+          rejected: 'Publicación rechazada.',
+        },
+        genericStatus: 'Estado de la publicación actualizado.',
         primaryUpdated: 'Imagen principal actualizada.',
+      },
+      statusLabel: 'Estado:',
+      statusValues: {
+        pending: 'Pendiente',
+        approved: 'Aprobado',
+        sold: 'Vendido',
+        rejected: 'Rechazado',
       },
       images: {
         heading: 'Galería de imágenes',
@@ -299,6 +314,7 @@ const translations = {
       status: {
         pending: 'Pending',
         approved: 'Approved',
+        sold: 'Sold',
         rejected: 'Rejected',
       },
       categories: {
@@ -457,8 +473,10 @@ const translations = {
       dashboardSubtitle: 'Approve or reject community submissions.',
       empty: 'There are no listings to moderate right now.',
       actions: {
-        approve: 'Approve',
-        reject: 'Reject',
+        markApproved: 'Approve',
+        markPending: 'Mark pending',
+        markSold: 'Mark sold',
+        markRejected: 'Reject',
         refresh: 'Refresh',
         refreshing: 'Refreshing…',
         signOut: 'Sign out',
@@ -471,9 +489,21 @@ const translations = {
         imageUpdate: 'We could not update the cover image.',
       },
       messages: {
-        approved: 'Listing approved.',
-        rejected: 'Listing rejected.',
+        statusUpdated: {
+          pending: 'Listing moved back to pending.',
+          approved: 'Listing approved.',
+          sold: 'Listing marked as sold.',
+          rejected: 'Listing rejected.',
+        },
+        genericStatus: 'Listing status updated.',
         primaryUpdated: 'Cover image updated.',
+      },
+      statusLabel: 'Status:',
+      statusValues: {
+        pending: 'Pending',
+        approved: 'Approved',
+        sold: 'Sold',
+        rejected: 'Rejected',
       },
       images: {
         heading: 'Listing images',

@@ -1,15 +1,15 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import ListingCard from '@/components/listings/ListingCard';
 import useTranslations from '@/hooks/useTranslations';
 
-async function fetchPendingListings(admin) {
-  console.log('[AdminDashboard] Fetching pending listings...');
-  const response = await fetch('/api/listings?status=pending', { cache: 'no-store' });
+async function fetchAllListings(admin) {
+  console.log('[AdminDashboard] Fetching all listings...');
+  const response = await fetch('/api/listings?includeAll=true', { cache: 'no-store' });
 
-  console.log('[AdminDashboard] Pending listings response status:', response.status);
+  console.log('[AdminDashboard] Listings response status:', response.status);
 
   if (!response.ok) {
     throw new Error(response.status === 401 ? admin.errors.unauthorized : admin.errors.loadFailed);
@@ -21,13 +21,12 @@ async function fetchPendingListings(admin) {
       console.error('[AdminDashboard] Failed to parse listings payload', error);
       return { listings: [] };
     });
-  const items = Array.isArray(payload?.listings) ? payload.listings : [];
-  return items.filter((listing) => listing.status === 'pending');
+  return Array.isArray(payload?.listings) ? payload.listings : [];
 }
 
 export default function AdminDashboard() {
   const { admin } = useTranslations();
-  const [pendingListings, setPendingListings] = useState([]);
+  const [listings, setListings] = useState([]);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState('');
   const [feedback, setFeedback] = useState('');
@@ -36,9 +35,10 @@ export default function AdminDashboard() {
     try {
       setStatus('loading');
       setFeedback('');
+      setError('');
       console.log('[AdminDashboard] Refreshing listings...');
-      const listings = await fetchPendingListings(admin);
-      setPendingListings(listings);
+      const fetchedListings = await fetchAllListings(admin);
+      setListings(fetchedListings);
     } catch (err) {
       console.error('Failed to refresh listings', err);
       setError(err.message || admin.errors.loadFailed);
@@ -51,7 +51,7 @@ export default function AdminDashboard() {
     refreshListings();
   }, [refreshListings]);
 
-  const moderateListing = async (id, action) => {
+  const updateListingStatus = async (id, nextStatus) => {
     try {
       setStatus('saving');
       setError('');
@@ -62,15 +62,49 @@ export default function AdminDashboard() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ status: action }),
+        body: JSON.stringify({ status: nextStatus }),
       });
 
+      const payload = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-        throw new Error(response.status === 401 ? admin.errors.unauthorized : admin.errors.saveFailed);
+        throw new Error(
+          response.status === 401
+            ? admin.errors.unauthorized
+            : payload?.error || admin.errors.saveFailed,
+        );
       }
 
-      setPendingListings((current) => current.filter((listing) => listing.id !== id));
-      setFeedback(action === 'approved' ? admin.messages.approved : admin.messages.rejected);
+      const updatedListing = payload?.listing;
+      const messageKey = typeof nextStatus === 'string' ? nextStatus : '';
+
+      if (updatedListing) {
+        setListings((current) =>
+          current.map((item) =>
+            item.id === updatedListing.id
+              ? {
+                  ...item,
+                  ...updatedListing,
+                }
+              : item,
+          ),
+        );
+      } else {
+        setListings((current) =>
+          current.map((item) =>
+            item.id === id
+              ? {
+                  ...item,
+                  status: nextStatus,
+                }
+              : item,
+          ),
+        );
+      }
+
+      const feedbackMessage =
+        admin.messages.statusUpdated?.[messageKey] ?? admin.messages.genericStatus ?? 'Listing status updated.';
+      setFeedback(feedbackMessage);
     } catch (err) {
       console.error('Failed to update listing', err);
       setError(err.message || admin.errors.saveFailed);
@@ -101,8 +135,15 @@ export default function AdminDashboard() {
 
       const updatedListing = payload?.listing;
       if (updatedListing) {
-        setPendingListings((current) =>
-          current.map((item) => (item.id === updatedListing.id ? updatedListing : item)),
+        setListings((current) =>
+          current.map((item) =>
+            item.id === updatedListing.id
+              ? {
+                  ...item,
+                  ...updatedListing,
+                }
+              : item,
+          ),
         );
       }
       setFeedback(admin.messages.primaryUpdated);
@@ -113,6 +154,36 @@ export default function AdminDashboard() {
       setStatus('idle');
     }
   };
+
+  const statusOrder = useMemo(
+    () => ({
+      pending: 0,
+      approved: 1,
+      sold: 2,
+      rejected: 3,
+    }),
+    [],
+  );
+
+  const sortedListings = useMemo(() => {
+    return [...listings].sort((a, b) => {
+      const orderA = statusOrder[a.status] ?? 99;
+      const orderB = statusOrder[b.status] ?? 99;
+      if (orderA !== orderB) {
+        return orderA - orderB;
+      }
+      return (a.id ?? 0) - (b.id ?? 0);
+    });
+  }, [listings, statusOrder]);
+
+  const statusOptions = [
+    { value: 'pending', label: admin.actions.markPending ?? 'Mark pending' },
+    { value: 'approved', label: admin.actions.markApproved ?? 'Approve' },
+    { value: 'sold', label: admin.actions.markSold ?? 'Mark sold' },
+    { value: 'rejected', label: admin.actions.markRejected ?? 'Reject' },
+  ];
+  const statusLabelText = admin.statusLabel ?? 'Status:';
+  const statusValueCopy = admin.statusValues ?? {};
 
   return (
     <div className="flex flex-col gap-6">
@@ -133,12 +204,12 @@ export default function AdminDashboard() {
       {feedback && <p className="text-sm text-emerald-600">{feedback}</p>}
       {error && <p className="text-sm text-red-600">{error}</p>}
       <section className="flex flex-col gap-6">
-        {pendingListings.length === 0 ? (
+        {sortedListings.length === 0 ? (
           <p className="rounded-3xl border border-dashed border-sand/60 bg-white/60 p-8 text-center text-sm text-deep-blue/70">
             {admin.empty}
           </p>
         ) : (
-          pendingListings.map((listing) => (
+          sortedListings.map((listing) => (
             <article key={listing.id} className="rounded-3xl bg-white/90 p-6 shadow-lg">
               <ListingCard listing={listing} layout="horizontal" showStatusTag />
               <ListingImagesManager
@@ -148,22 +219,28 @@ export default function AdminDashboard() {
                 onSetPrimary={(imageId) => updatePrimaryImage(listing.id, imageId)}
               />
               <div className="mt-4 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={() => moderateListing(listing.id, 'approved')}
-                  disabled={status === 'saving'}
-                  className="rounded-full bg-emerald-500/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {admin.actions.approve}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => moderateListing(listing.id, 'rejected')}
-                  disabled={status === 'saving'}
-                  className="rounded-full bg-red-500/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-white disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  {admin.actions.reject}
-                </button>
+                <span className="mr-auto text-xs uppercase tracking-[0.3em] text-deep-blue/60">
+                  {statusLabelText}{' '}
+                  <span className="font-semibold text-deep-blue">{statusValueCopy?.[listing.status] ?? listing.status}</span>
+                </span>
+                {statusOptions.map((option) => {
+                  const isActive = listing.status === option.value;
+                  return (
+                    <button
+                      key={option.value}
+                      type="button"
+                      onClick={() => updateListingStatus(listing.id, option.value)}
+                      disabled={status === 'saving' || isActive}
+                      className={`rounded-full px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] transition-colors disabled:cursor-not-allowed disabled:opacity-60 ${
+                        isActive
+                          ? 'bg-deep-blue text-white shadow-inner'
+                          : 'border border-deep-blue/20 bg-white text-deep-blue hover:border-deep-blue/40 hover:bg-deep-blue hover:text-white'
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  );
+                })}
               </div>
             </article>
           ))
